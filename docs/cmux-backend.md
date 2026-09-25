@@ -93,7 +93,7 @@ Capture remains bounded and locally trimmed after `read-screen` becomes availabl
 
 For Pi, structural readiness is necessary but not sufficient.
 The cmux spawn path waits a bounded interval for the task's generation-bound Pi extension to report `agent_start`, accepting either the resulting busy state or a later settled idle state from the same `pi-ext` source.
-If the staged command is not submitted, that event never arrives, or metadata publication fails, spawn attempts exact endpoint cleanup and retains `state/<id>.cmux-launch-recovery` with the exact endpoint, project copy, Pi start confirmation, and unverified closure. It retires the busy record without publishing worker metadata, refuses a same-id retry until that record is resolved, and does not switch to tmux.
+If the staged command is not submitted, that event never arrives, metadata publication fails, or final backlog dispatch fails, spawn attempts exact endpoint cleanup and retains `state/<id>.cmux-launch-recovery` with the exact endpoint, project copy, Pi start confirmation, and unverified closure. It rolls back the task and busy records when possible, refuses a same-id retry until that recovery record is resolved, and does not switch to tmux.
 
 `current_directory` follows a top-level shell `cd` but not the foreground subshell opened by `treehouse get`.
 Spawn-time worktree discovery sends begin and end markers around `pwd`, captures the marked block, and joins wrapped path lines.

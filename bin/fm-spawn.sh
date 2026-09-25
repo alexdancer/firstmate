@@ -5301,10 +5301,23 @@ else
 fi
 if [ "$SPAWN_BACKLOG_COMMIT_STATUS" -ne 0 ]; then
   if [ "$RELAUNCH" -eq 0 ]; then
+    SPAWN_CMUX_PI_DISPATCH_RECOVERY=0
+    case "$BACKEND:$HARNESS" in
+      cmux:pi|cmux:pi-signed)
+        SPAWN_CMUX_PI_DISPATCH_RECOVERY=1
+        cmux_pi_spawn_fail "Pi began processing but its backlog item could not be moved to In flight ($FM_BACKLOG_TRANSITION_ERROR)"
+        ;;
+    esac
     if spawn_fresh_commit_rollback; then
-      echo "error: task $ID's backlog item could not be moved to In flight ($FM_BACKLOG_TRANSITION_ERROR); its record was removed so no worker is left that the backlog does not own - close out endpoint $T and local copy $WT by hand, then re-run the spawn" >&2
+      if [ "$SPAWN_CMUX_PI_DISPATCH_RECOVERY" = 0 ]; then
+        echo "error: task $ID's backlog item could not be moved to In flight ($FM_BACKLOG_TRANSITION_ERROR); its record was removed so no worker is left that the backlog does not own - close out endpoint $T and local copy $WT by hand, then re-run the spawn" >&2
+      fi
     else
-      echo "error: task $ID's backlog item could not be moved to In flight ($FM_BACKLOG_TRANSITION_ERROR), and failed-dispatch cleanup is incomplete; the provisional record may remain at $STATE/$ID.meta - close out endpoint $T and local copy $WT by hand, then remove the record and busy state before retrying" >&2
+      if [ "$SPAWN_CMUX_PI_DISPATCH_RECOVERY" = 1 ]; then
+        echo "error: failed-dispatch rollback is incomplete ($FM_BACKLOG_TRANSITION_ERROR); the task record may remain at $STATE/$ID.meta alongside $STATE/$ID.cmux-launch-recovery - preserve $WT and resolve exact endpoint $T before retrying" >&2
+      else
+        echo "error: task $ID's backlog item could not be moved to In flight ($FM_BACKLOG_TRANSITION_ERROR), and failed-dispatch cleanup is incomplete; the provisional record may remain at $STATE/$ID.meta - close out endpoint $T and local copy $WT by hand, then remove the record and busy state before retrying" >&2
+      fi
     fi
   else
     echo "error: task $ID was republished but its backlog item could not be moved to In flight ($FM_BACKLOG_TRANSITION_ERROR); fix the backlog and re-run the relaunch" >&2

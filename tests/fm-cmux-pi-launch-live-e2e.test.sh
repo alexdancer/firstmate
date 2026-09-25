@@ -12,16 +12,17 @@ TASK="test-cmux-pi-launch-$$"
 LABEL="fm-$TASK"
 LAB=
 WORKSPACE_ID=
+SURFACE_ID=
 
 cleanup() {
   local wsid=$WORKSPACE_ID
   [ -n "$LAB" ] || return 0
   FM_HOME="$LAB"
   export FM_HOME
-  if [ -n "$wsid" ]; then
+  if [ -n "$wsid" ] && [ -n "$SURFACE_ID" ]; then
     # shellcheck source=tests/cmux-test-safety.sh
     . "$ROOT/tests/cmux-test-safety.sh"
-    cmux_safe_close_workspace "$wsid" "$LABEL" >/dev/null 2>&1 || true
+    cmux_safe_close_workspace "$wsid:$SURFACE_ID" "$LABEL" >/dev/null 2>&1 || true
   fi
   printf 'cmux Pi lab preserved at %s\n' "$LAB" >&2
 }
@@ -69,6 +70,8 @@ FM_HOME="$LAB" "$ROOT/bin/fm-spawn.sh" "$TASK" "$LAB/projects/probe" \
 assert_present "$LAB/state/$TASK.meta" "confirmed real Pi spawn did not publish metadata"
 WORKSPACE_ID=$(sed -n 's/^cmux_workspace_id=//p' "$LAB/state/$TASK.meta" | head -1)
 [ -n "$WORKSPACE_ID" ] || fail "confirmed real Pi spawn did not record its exact cmux workspace"
+SURFACE_ID=$(sed -n 's/^cmux_surface_id=//p' "$LAB/state/$TASK.meta" | head -1)
+[ -n "$SURFACE_ID" ] || fail "confirmed real Pi spawn did not record its exact cmux surface"
 
 for _ in $(seq 1 60); do
   grep -Eq '^done( \[at=[0-9]+\])?: cmux Pi launch probe passed$' "$LAB/state/$TASK.status" 2>/dev/null && break

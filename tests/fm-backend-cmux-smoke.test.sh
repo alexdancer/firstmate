@@ -38,9 +38,11 @@ PING_STATE=$(fm_backend_cmux_ping_state)
 
 WS1=""
 WS2=""
+SF1=""
+_SF2=""
 cleanup_all() {
-  [ -z "$WS1" ] || cmux_safe_close_workspace "$WS1" "fm-test-smoke1"
-  [ -z "$WS2" ] || cmux_safe_close_workspace "$WS2" "fm-test-smoke2"
+  [ -z "$WS1" ] || [ -z "$SF1" ] || cmux_safe_close_workspace "$WS1:$SF1" "fm-test-smoke1"
+  [ -z "$WS2" ] || [ -z "$_SF2" ] || cmux_safe_close_workspace "$WS2:$_SF2" "fm-test-smoke2"
 }
 trap cleanup_all EXIT
 

@@ -414,20 +414,13 @@ fm_backend_cmux_surface_exists() {  # <workspace_id> <surface_id>
 # current-window scoped and can lag a successful create response, so the exact
 # UUID pair remains authoritative when its surface exists structurally.
 fm_backend_cmux_target_ready() {  # <target> [expected-label]
-  local expected_label=${2:-} expected_title listing title sfid
+  local expected_label=${2:-} expected_title listing title
   fm_backend_cmux_parse_target "$1" || return 1
   if [ -n "$expected_label" ]; then
     expected_title=$(fm_backend_cmux_scoped_title "$expected_label")
     listing=$(fm_backend_cmux_cli workspace list --json --id-format uuids 2>/dev/null) || listing=
     title=$(printf '%s' "$listing" | jq -r --arg id "$FM_BACKEND_CMUX_WORKSPACE" '.workspaces[]? | select(.id == $id) | .title' 2>/dev/null)
-    if [ -n "$title" ]; then
-      [ "$title" = "$expected_title" ] || return 1
-      fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE" && return 0
-      sfid=$(fm_backend_cmux_surface_id_for_workspace "$FM_BACKEND_CMUX_WORKSPACE")
-      [ -n "$sfid" ] || return 1
-      FM_BACKEND_CMUX_SURFACE=$sfid
-      return 0
-    fi
+    [ -z "$title" ] || [ "$title" = "$expected_title" ] || return 1
   fi
   fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE"
 }
@@ -621,11 +614,7 @@ fm_backend_cmux_window_of_workspace() {  # <workspace_id> -> "<window_id> <count
 # recovery/list_live ignore it) - cmux's own "closed the last tab" outcome.
 fm_backend_cmux_kill() {  # <target> [unused] [expected-label]
   local expected_label=${3:-} wsid wininfo win count
-  if [ -n "$expected_label" ]; then
-    fm_backend_cmux_target_ready "$1" "$expected_label" || return 0
-  else
-    fm_backend_cmux_parse_target "$1" || return 0
-  fi
+  fm_backend_cmux_target_ready "$1" "$expected_label" || return 0
   wsid=$FM_BACKEND_CMUX_WORKSPACE
   wininfo=$(fm_backend_cmux_window_of_workspace "$wsid") || wininfo=
   win=${wininfo%% *}

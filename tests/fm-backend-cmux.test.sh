@@ -616,20 +616,20 @@ test_send_refuses_same_title_when_exact_probe_fails() {
   pass "cmux refuses a same-title workspace when the exact probe fails"
 }
 
-test_send_refreshes_surface_in_the_exact_visible_workspace() {
-  local dir fb title
+test_send_refuses_changed_surface_in_the_exact_visible_workspace() {
+  local dir fb title status
   dir="$TMP_ROOT/ready-exact-workspace-surface-refresh"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
   cmux_workspace_list_response "$dir" 1 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
-  cmux_panes_empty_response "$dir" 2
-  cmux_panes_response "$dir" 3 "dddddddd-3333-3333-3333-333333333333"
+  cmux_panes_response "$dir" 2 "dddddddd-3333-3333-3333-333333333333"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_literal "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "probe" fm-label' "$ROOT"
-  expect_code 0 $? "send should refresh the surface inside the exact visible workspace"
-  assert_contains "$(cat "$dir/log")" $'\x1f''send'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000'$'\x1f''--surface'$'\x1f''dddddddd-3333-3333-3333-333333333333' \
-    "send did not use the refreshed surface in the exact workspace"
-  pass "cmux refreshes a surface only within the exact visible workspace"
+  status=$?
+  [ "$status" -ne 0 ] || fail "send accepted a different surface in the recorded workspace"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''send'$'\x1f' \
+    "send targeted a different surface after the recorded one disappeared"
+  pass "cmux refuses a changed surface in the exact visible workspace"
 }
 
 test_target_ready_rejects_label_mismatch() {
@@ -1095,10 +1095,9 @@ test_window_of_workspace_refuses_incomplete_scan() {
 test_kill_closes_workspace_directly_when_not_last() {
   local dir fb
   dir="$TMP_ROOT/kill-workspace"; mkdir -p "$dir/responses"
-  # 1: list-windows -> the owning window has 2 workspaces (target is NOT last)
-  cmux_windows_response "$dir" 1 "eeeeeeee-0000-0000-0000-000000000000" 2
-  # 2: workspace list --window eeeeeeee -> contains the target
-  cmux_workspace_list_response "$dir" 2 "aaaaaaaa-0000-0000-0000-000000000000" "the-task" "ffffffff-0000-0000-0000-000000000000" "other"
+  cmux_panes_response "$dir" 1 "bbbbbbbb-1111-1111-1111-111111111111"
+  cmux_windows_response "$dir" 2 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "the-task" "ffffffff-0000-0000-0000-000000000000" "other"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
@@ -1117,9 +1116,9 @@ test_kill_closes_workspace_directly_when_not_last() {
 test_kill_adds_sibling_when_last_in_window() {
   local dir fb
   dir="$TMP_ROOT/kill-last-in-window"; mkdir -p "$dir/responses"
-  cmux_windows_response "$dir" 1 "eeeeeeee-0000-0000-0000-000000000000" 2
-  # 2: workspace list --window eeeeeeee -> contains the target
-  cmux_workspace_list_response "$dir" 2 "aaaaaaaa-0000-0000-0000-000000000000" "the-task"
+  cmux_panes_response "$dir" 1 "bbbbbbbb-1111-1111-1111-111111111111"
+  cmux_windows_response "$dir" 2 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "the-task"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
@@ -1139,10 +1138,10 @@ test_kill_adds_sibling_when_last_in_window() {
 test_kill_is_best_effort_when_close_workspace_fails() {
   local dir fb
   dir="$TMP_ROOT/kill-workspace-fail"; mkdir -p "$dir/responses"
-  # 1: list-windows (not last), 2: workspace list --window, 3: close-workspace fails
-  cmux_windows_response "$dir" 1 "eeeeeeee-0000-0000-0000-000000000000" 2
-  cmux_workspace_list_response "$dir" 2 "aaaaaaaa-0000-0000-0000-000000000000" "the-task" "ffffffff-0000-0000-0000-000000000000" "other"
-  printf '1\n' > "$dir/responses/3.exit"
+  cmux_panes_response "$dir" 1 "bbbbbbbb-1111-1111-1111-111111111111"
+  cmux_windows_response "$dir" 2 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "the-task" "ffffffff-0000-0000-0000-000000000000" "other"
+  printf '1\n' > "$dir/responses/4.exit"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
@@ -1152,6 +1151,49 @@ test_kill_is_best_effort_when_close_workspace_fails() {
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-surface' \
     "kill should not call close-surface"
   pass "fm_backend_cmux_kill: never fails even when close-workspace fails"
+}
+
+test_kill_refuses_unlabeled_changed_surface() {
+  local dir fb
+  dir="$TMP_ROOT/kill-changed-surface"; mkdir -p "$dir/responses"
+  cmux_panes_response "$dir" 1 "dddddddd-3333-3333-3333-333333333333"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''close-workspace' \
+    "kill closed a workspace after its recorded surface disappeared"
+  pass "fm_backend_cmux_kill: refuses an unlabeled changed surface"
+}
+
+test_live_cleanup_guard_requires_exact_surface() {
+  local dir fb title status
+  dir="$TMP_ROOT/safe-close-changed-surface"; mkdir -p "$dir/responses"
+  title=$(cmux_expected_scoped_title fm-test-guard)
+  cmux_workspace_list_response "$dir" 1 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
+  cmux_panes_response "$dir" 2 "dddddddd-3333-3333-3333-333333333333"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; . "$0/tests/cmux-test-safety.sh"; cmux_safe_close_workspace "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" fm-test-guard' "$ROOT"
+  status=$?
+  [ "$status" -ne 0 ] || fail "live cleanup guard accepted a changed surface"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''close-workspace' \
+    "live cleanup guard closed a workspace after its recorded surface disappeared"
+  pass "live cmux cleanup guard refuses a changed surface"
+}
+
+test_live_cleanup_guard_closes_exact_surface() {
+  local dir fb title
+  dir="$TMP_ROOT/safe-close-exact-surface"; mkdir -p "$dir/responses"
+  title=$(cmux_expected_scoped_title fm-test-guard)
+  cmux_workspace_list_response "$dir" 1 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
+  cmux_panes_response "$dir" 2 "bbbbbbbb-1111-1111-1111-111111111111"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; . "$0/tests/cmux-test-safety.sh"; cmux_safe_close_workspace "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" fm-test-guard' "$ROOT"
+  expect_code 0 $? "live cleanup guard should accept its exact surface"
+  assert_contains "$(cat "$dir/log")" $'\x1f''close-workspace'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000' \
+    "live cleanup guard did not close the exact workspace"
+  pass "live cmux cleanup guard closes its exact surface"
 }
 
 test_kill_refuses_stale_target_with_same_title() {
@@ -1245,7 +1287,7 @@ test_target_ready_accepts_exact_surface_when_title_listing_is_masked
 test_send_prefers_exact_surface_over_same_title_in_current_window
 test_send_refuses_same_title_when_exact_surface_is_missing
 test_send_refuses_same_title_when_exact_probe_fails
-test_send_refreshes_surface_in_the_exact_visible_workspace
+test_send_refuses_changed_surface_in_the_exact_visible_workspace
 test_target_ready_rejects_label_mismatch
 test_capture_trims_locally
 test_capture_fails_when_read_screen_fails_empty
@@ -1276,6 +1318,9 @@ test_window_of_workspace_refuses_incomplete_scan
 test_kill_closes_workspace_directly_when_not_last
 test_kill_adds_sibling_when_last_in_window
 test_kill_is_best_effort_when_close_workspace_fails
+test_kill_refuses_unlabeled_changed_surface
+test_live_cleanup_guard_requires_exact_surface
+test_live_cleanup_guard_closes_exact_surface
 test_kill_refuses_stale_target_with_same_title
 test_list_live_filters_by_title_prefix
 test_secondmate_spawn_refuses_cmux_backend

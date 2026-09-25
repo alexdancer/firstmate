@@ -15,11 +15,12 @@ FAILURE_ID="cmux-pi-ready-fail-$$"
 SEND_FAILURE_ID="cmux-pi-send-fail-$$"
 ENTER_FAILURE_ID="cmux-pi-enter-fail-$$"
 PUBLISH_FAILURE_ID="cmux-pi-publish-fail-$$"
+DISPATCH_FAILURE_ID="cmux-pi-dispatch-fail-$$"
 TMUX_FAILURE_ID="tmux-pi-send-fail-$$"
 
 cleanup_launch_tmp() {
-  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID" "/tmp/fm-$SEND_FAILURE_ID" "/tmp/fm-$ENTER_FAILURE_ID" "/tmp/fm-$PUBLISH_FAILURE_ID" "/tmp/fm-$TMUX_FAILURE_ID"
-  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" -o -name "fm-$SEND_FAILURE_ID+*" -o -name "fm-$ENTER_FAILURE_ID+*" -o -name "fm-$PUBLISH_FAILURE_ID+*" -o -name "fm-$TMUX_FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
+  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID" "/tmp/fm-$SEND_FAILURE_ID" "/tmp/fm-$ENTER_FAILURE_ID" "/tmp/fm-$PUBLISH_FAILURE_ID" "/tmp/fm-$DISPATCH_FAILURE_ID" "/tmp/fm-$TMUX_FAILURE_ID"
+  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" -o -name "fm-$SEND_FAILURE_ID+*" -o -name "fm-$ENTER_FAILURE_ID+*" -o -name "fm-$PUBLISH_FAILURE_ID+*" -o -name "fm-$DISPATCH_FAILURE_ID+*" -o -name "fm-$TMUX_FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
   fm_test_cleanup
 }
 trap cleanup_launch_tmp EXIT INT TERM
@@ -291,6 +292,44 @@ SH
   pass "fm-spawn attempts exact Pi cleanup when post-processing metadata publication fails"
 }
 
+test_spawn_retains_exact_recovery_after_dispatch_rollback() {
+  local fixture out status
+  fixture=$(make_case dispatch-failure "$DISPATCH_FAILURE_ID")
+  read_case "$fixture"
+  rm -f "$HOME_DIR/config/backlog-backend"
+  printf '%s\n' 'backend = "markdown"' '' '[markdown]' 'path = "data/backlog.md"' > "$HOME_DIR/.tasks.toml"
+  printf '%s\n' '# Backlog' '' '## In flight' '' '## Queued' '' '## Done' > "$HOME_DIR/data/backlog.md"
+  cat > "$FAKEBIN_DIR/tasks-axi" <<'SH'
+#!/usr/bin/env bash
+case "${1:-}" in
+  --version) printf '0.2.6\n' ;;
+  update) printf '%s\n' '--archive-body' ;;
+  mv) printf '%s\n' '[<id>...]' ;;
+  show) printf 'task:\n  id: %s\n  state: queued\n  held: no\n  blocked: no\n' "${FM_FAKE_CMUX_ID:?}" ;;
+  start) printf 'start\n' >> "${FM_FAKE_CMUX_LOG:?}.dispatch"; exit 1 ;;
+  *) exit 2 ;;
+esac
+SH
+  chmod +x "$FAKEBIN_DIR/tasks-axi"
+  out=$(run_case_spawn "$DISPATCH_FAILURE_ID" 1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn accepted Pi after both backlog dispatch attempts failed"
+  assert_present "$CASE_DIR/launch-attempted" "dispatch failure did not launch Pi"
+  [ "$(wc -l < "$CASE_DIR/cmux.log.dispatch")" -eq 2 ] || fail "dispatch failure did not exercise both start attempts"
+  assert_contains "$out" 'backlog item could not be moved to In flight' \
+    "spawn did not report the failed backlog dispatch"
+  assert_cmux_recovery_record "$DISPATCH_FAILURE_ID" 1
+  assert_absent "$HOME_DIR/state/$DISPATCH_FAILURE_ID.meta" \
+    "failed dispatch retained an ordinary worker record"
+  assert_absent "$HOME_DIR/state/$DISPATCH_FAILURE_ID.busy-state" \
+    "failed dispatch retained an ordinary busy record"
+  assert_present "$COPY_DIR/README.md" "failed dispatch lost the isolated project copy"
+  assert_contains "$(cat "$CASE_DIR/cmux.log")" \
+    'close-workspace --workspace aaaaaaaa-0000-0000-0000-000000000000' \
+    "failed dispatch did not attempt exact endpoint cleanup"
+  pass "fm-spawn preserves exact cmux recovery after failed backlog dispatch"
+}
+
 test_spawn_propagates_tmux_launch_send_failure() {
   local fixture out status
   fixture=$(make_case tmux-send-failure "$TMUX_FAILURE_ID")
@@ -323,6 +362,7 @@ test_spawn_refuses_idle_shell_without_worker_record
 test_spawn_refuses_cmux_launch_send_failure
 test_spawn_refuses_cmux_launch_enter_failure
 test_spawn_closes_started_pi_after_record_publication_failure
+test_spawn_retains_exact_recovery_after_dispatch_rollback
 test_spawn_propagates_tmux_launch_send_failure
 
 echo "# all cmux Pi launch confirmation tests passed"
