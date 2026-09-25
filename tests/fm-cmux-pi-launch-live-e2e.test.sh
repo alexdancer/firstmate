@@ -22,11 +22,16 @@ cleanup() {
   if [ -n "$wsid" ] && [ -n "$SURFACE_ID" ]; then
     # shellcheck source=tests/cmux-test-safety.sh
     . "$ROOT/tests/cmux-test-safety.sh"
-    cmux_safe_close_workspace "$wsid:$SURFACE_ID" "$LABEL" >/dev/null 2>&1 || true
+    if ! cmux_safe_close_workspace "$wsid:$SURFACE_ID" "$LABEL"; then
+      printf 'cmux Pi cleanup could not confirm closure; lab preserved at %s\n' "$LAB" >&2
+      return 1
+    fi
   fi
   printf 'cmux Pi lab preserved at %s\n' "$LAB" >&2
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 fm_live_gate opt-in FM_CMUX_PI_LAUNCH_LIVE jq treehouse pi python3
 # shellcheck source=bin/backends/cmux.sh
@@ -81,4 +86,9 @@ assert_grep 'done' "$LAB/state/$TASK.status" \
   "real Pi did not complete the launch probe after spawn confirmation"
 [ "$(cat "$LAB/data/$TASK/report.md" 2>/dev/null)" = 'cmux Pi launch probe passed' ] \
   || fail "real Pi did not process the probe instructions"
+if ! cleanup; then
+  trap - EXIT INT TERM
+  exit 1
+fi
+trap - EXIT INT TERM
 pass "a real cmux Pi scout reports processing the launch brief before fm-spawn returns success"
