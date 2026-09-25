@@ -1,0 +1,56 @@
+Provisioned fm-lab-launch-gate-33089-28272
+
+baseline: fm-spawn exit=0
+warning: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/baseline/home/data/nmgate-baseline-33022/launch-brief.md records no ship branch; defaulting to legacy branch fm/nmgate-baseline-33022
+warning: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/baseline/home/data/nmgate-baseline-33022/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode local-only - confirm its definition of done matches
+notice: nmgate-baseline-33022 ships mode=local-only while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned nmgate-baseline-33022 harness=python3 kind=ship mode=local-only yolo=off window=fm-lab-launch-gate-33089-28272:w1:p1 worktree=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/baseline/candidate
+worker_started=False; candidate_identical=True
+
+baseline pane: candidate ➜ export GOTMPDIR=/tmp/fm-nmgate-baseline-33022/gotmp                         fm/nmgate-baseline-33022[+?]
+export COMPACT_ADVISER_DISABLE=1
+export FM_TASK_ID=nmgate-baseline-33022
+candidate ➜ export COMPACT_ADVISER_DISABLE=1                                            fm/nmgate-baseline-33022[+?]
+candidate ➜ export FM_TASK_ID=nmgate-baseline-33022. '/tmp/fm-nmgate-baseline-33022+b0331c93b7a7fbdfd4f50dfb42b21b3fefa
+5e313cf60bd607d8f330359d5bd9b/launch.s1790315962.33412.18645.sh'
+export: not valid in this context: /tmp/fm-nmgate-baseline-33022+b0331c93b7a7fbdfd4f50dfb42b21b3fefa5e313cf60bd607d8f33
+0359d5bd9b/launch.s1790315962.33412.18645.sh
+candidate ❯                                                                             fm/nmgate-baseline-33022[+?]
+
+
+normal: fm-spawn exit=0
+warning: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/normal/home/data/nmgate-normal-33022/launch-brief.md records no ship branch; defaulting to legacy branch fm/nmgate-normal-33022
+warning: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/normal/home/data/nmgate-normal-33022/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode local-only - confirm its definition of done matches
+notice: nmgate-normal-33022 ships mode=local-only while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned nmgate-normal-33022 harness=python3 kind=ship mode=local-only yolo=off window=fm-lab-launch-gate-33089-28272:w2:p1 worktree=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/normal/candidate
+worker_started=True; candidate_identical=True
+
+Foreground worker confirmed; payload_bytes=6; payload_sha256=317b32c143692b9939c197f6a5df54f9698df9a4882fe8bf19608968662be4fa; environment=nmgate-normal-33022, /tmp/fm-nmgate-normal-33022/gotmp, COMPACT_ADVISER_DISABLE=1
+
+long: fm-spawn exit=0
+warning: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/long/home/data/nmgate-long-33022/launch-brief.md records no ship branch; defaulting to legacy branch fm/nmgate-long-33022
+warning: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/long/home/data/nmgate-long-33022/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode local-only - confirm its definition of done matches
+notice: nmgate-long-33022 ships mode=local-only while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned nmgate-long-33022 harness=python3 kind=ship mode=local-only yolo=off window=fm-lab-launch-gate-33089-28272:w3:p1 worktree=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/long/candidate
+worker_started=True; candidate_identical=True
+
+Foreground worker confirmed; payload_bytes=7209; payload_sha256=f6e0cd32fea31a3f1d0c38a8e6d96e17d161ef90cff90423c2afa20b5127538c; environment=nmgate-long-33022, /tmp/fm-nmgate-long-33022/gotmp, COMPACT_ADVISER_DISABLE=1
+
+blocked: fm-spawn exit=1
+warning: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/blocked/home/data/nmgate-blocked-33022/launch-brief.md records no ship branch; defaulting to legacy branch fm/nmgate-blocked-33022
+warning: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/live/blocked/home/data/nmgate-blocked-33022/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode local-only - confirm its definition of done matches
+notice: nmgate-blocked-33022 ships mode=local-only while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+error: herdr launch setup did not complete in the pane for fm-nmgate-blocked-33022; refusing to append the launch command
+worker_started=False; candidate_identical=True
+
+Blocked setup refused without launching; shell response: readonly FM_TASK_ID=blocked; : > /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-
+tmp/live/blocked/readonly-ready
+candidate ➜ readonly FM_TASK_ID=blocked; : > /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/
+.local-test-tmp/live/blocked/readonly-ready
+candidate ➜ export GOTMPDIR=/tmp/fm-nmgate-blocked-33022/gotmp && export COMPACT_ADVISER_DISABLE=1 && export FM_TASK_ID=
+nmgate-blocked-33022 && : > '/tmp/fm-nmgate-blocked-33022/launch-setup.s1790315972.40005.2532.ready'
+zsh: read-only variable: FM_TASK_ID
+candidate ❯                                                                               fm/nmgate-blocked-33022[+?]
+
+
+Guarded teardown exit=0; default-session tripwire unchanged

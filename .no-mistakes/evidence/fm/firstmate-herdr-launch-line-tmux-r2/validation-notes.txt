@@ -1,0 +1,5 @@
+Existing regression: TMPDIR="$PWD/.local-test-tmp" FM_HERDR_LAB_STATE_DIR="$PWD/.local-test-tmp/labs" HERDR_LAB_HELPER="$PWD/bin/fm-herdr-lab.sh" bin/fm-test-run.sh --jobs 1 tests/fm-herdr-launch-setup-e2e.test.sh completed exit 0 without gate skip.
+Manual drivers: python3 .local-test-tmp/live-check.py; python3 .local-test-tmp/trace-check.py; python3 .local-test-tmp/claude-check.py.
+Trace fixture initially omitted the required frozen home-session state. After initializing that state through fm_trace_context_session_start, the live trace checks passed. This was test setup, not a product failure.
+All guarded lab teardowns completed with unchanged default-session tripwires. Only isolated synthetic candidates were used; the production MealPrep candidate and fleet were not accessed.
+CLI/process evidence was collected. No screenshot was captured: this is a launch-ordering change, and the remaining Claude consent gate is recorded in its pane transcript.

@@ -1,0 +1,51 @@
+Herdr herdr 0.9.1; Pi 0.87.1
+Attached lab viewer with fixed 40x120 pty and drained master.
+Provisioned named isolated lab fm-lab-pi-brief-proof-29092-602
+Public fm-spawn --relaunch exit=0
+notice: nmpi-29090 ships mode=local-only while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned nmpi-29090 harness=pi kind=ship mode=local-only yolo=off window=fm-lab-pi-brief-proof-29092-602:w2:p1 worktree=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/pi-live/candidate
+
+{"id":"cli:pane:wait-output","result":{"matched_line":"   Do not trust","pane_id":"w2:p1","read":{"format":"text","pane_id":"w2:p1","revision":0,"source":"recent_unwrapped","tab_id":"w2:t1","text":"candidate ➜ export GOTMPDIR=/tmp/fm-nmpi-29090/gotmp && export COMPACT_ADVISER_DISABLE=1 && export FM_TASK_ID=nmpi-29090 && : > '/tmp/fm-nmpi-29090/launch-setup.s1790315950.29341.10251.ready'\ncandidate ➜ . '/tmp/fm-nmpi-29090+b5960108c4dae24407bbf10a33966f9fdf03af9aeae06cec2188b36590109ef3/launch.s1790315950.29341.10251.sh'\n─────────────────────────────────────────────────────────────────────────────────────────────\n\n Trust project folder?\n /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/\n pi-live/candidate\n\n This allows pi to load .pi settings and resources, install missing project packages, and\n execute project extensions.\n\n → Trust\n   Trust parent folder\n (/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp\n /pi-live)\n   Trust (this session only)\n   Do not trust\n   Do not trust (this session only)\n\n ↑↓ navigate  enter select  escape/ctrl+c cancel\n\n─────────────────────────────────────────────────────────────────────────────────────────────","truncated":false,"workspace_id":"w2"},"revision":0,"type":"output_matched"}}
+
+Initial pane:
+candidate ➜ export GOTMPDIR=/tmp/fm-nmpi-29090/gotmp && export COMPACT_ADVISER_DISABLE=1 && export FM_TASK_ID=nmpi-29090 && : > '/tmp/fm-nmpi-29090/launch-setup.s1790315950.29341.10251.ready'
+candidate ➜ . '/tmp/fm-nmpi-29090+b5960108c4dae24407bbf10a33966f9fdf03af9aeae06cec2188b36590109ef3/launch.s1790315950.29341.10251.sh'
+─────────────────────────────────────────────────────────────────────────────────────────────
+
+ Trust project folder?
+ /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/
+ pi-live/candidate
+
+ This allows pi to load .pi settings and resources, install missing project packages, and
+ execute project extensions.
+
+ → Trust
+   Trust parent folder
+ (/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp
+ /pi-live)
+   Trust (this session only)
+   Do not trust
+   Do not trust (this session only)
+
+ ↑↓ navigate  enter select  escape/ctrl+c cancel
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+Accepted Pi project trust for this disposable candidate only.
+Exported to: /Users/alex/.no-mistakes/evidence/01M3BH9GJAQT2Z7T9F8BAK50GD/round2/pi-session.html
+
+{
+  "session": "fm-lab-pi-brief-proof-29092-602",
+  "head": "2cd26b772c46e7544ce33fdcc244f71401f5efe0",
+  "claude": {
+    "result": "untested",
+    "reason": "Prior Claude run stopped at external-import consent; no consent requested or attempted in this round."
+  },
+  "expected_reply": "LAUNCH_READY 35077 3e86a1630dbd8535",
+  "assistant_replies": [
+    "LAUNCH_READY 35077 3e86a1630dbd8535"
+  ],
+  "challenge_read": true,
+  "candidate_identical": true,
+  "pass": true
+}
+Guarded teardown/default-session tripwire exit=0

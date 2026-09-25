@@ -1,0 +1,12 @@
+Finding test-1 follow-up: real Pi brief processing passed; Claude remains untested.
+Root cause of the prior inconclusive verdict was the Claude external-import consent gate, not a remaining reproduced launch-code failure. No product fix was needed in this round.
+Focused regression: bin/fm-test-run.sh --jobs 1 tests/fm-herdr-launch-setup-e2e.test.sh passed, one test, no skips.
+Live evaluation: python3 .local-test-tmp/pi-check.py drove public fm-spawn --relaunch with real Pi 0.87.1, openai-codex/gpt-6-sol, low thinking, and Herdr 0.9.1.
+Named lab: fm-lab-pi-brief-proof-61627-18346. All lifecycle calls used bin/fm-herdr-lab.sh.
+The runner initially tried the skill's obsolete `wait output` command; Herdr 0.9.1 rejected it. Read-only CLI help showed the current command is `pane wait-output`. This was an evaluation-driver issue, not a product launch failure.
+After the runner's early pane snapshot, a separate guarded pane read showed Pi's Trust project folder prompt for the disposable candidate. A separate guarded `pane send-keys w1:p1 Enter` accepted that exact folder and unblocked the same run. Its trust/config/session writes were isolated in the worktree. No global configuration was changed.
+Pi's serialized assistant tool call read challenge.json; the tool result contained 14450, 19434, and ae32d47623a4e47e. The assistant's completed response was LAUNCH_READY 33884 ae32d47623a4e47e. The expected sum and nonce were not in the launch prompt.
+Candidate file hashes, staged diff, and git status were identical before/after. The real preserved MealPrep candidate was never accessed or modified.
+Guarded teardown exited zero and passed the default-session tripwire. The follow-up pane read returned server_not_running, confirming cleanup.
+Claude limitation retained: its earlier real launch stopped at the external-import consent prompt. This round did not request or supply that consent, and does not claim Claude brief processing passed.
+Only the maintainer verification record changed. No broad suite, linters, formatters, static analysis, push, PR, or pipeline-control commands were run.

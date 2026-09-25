@@ -1,0 +1,7 @@
+candidate ➜ export GOTMPDIR=/tmp/fm-nmgate-trace-ready-94835/gotmp && export COMPACT_ADVISER_DISABLE=1 && export LAVISH
+_AXI_HOST='http://127.0.0.1:4387/' && export FM_TASK_ID=nmgate-trace-ready-94835 && export TRACEPARENT=00-f1e4cb511a32b
+627e9da4a81be738fbb-258faf8fefb335e7-01 && : > '/tmp/fm-nmgate-trace-ready-94835/launch-setup.s1790315337.94926.16008.r
+eady'
+candidate ➜ . '/tmp/fm-nmgate-trace-ready-94835+9e3cf64e5aaa1fc2c1196337f8d8cc4f4e9a0b70dee2db579ea9ea7048343950/launch
+.s1790315337.94926.16008.sh'
+WORKER_STARTED: environment received; candidate preserved

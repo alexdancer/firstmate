@@ -1,0 +1,9 @@
+Target: 2cd26b772c46e7544ce33fdcc244f71401f5efe0.
+Real Herdr 0.9.1 with Pi 0.87.1, openai-codex/gpt-6-sol, low thinking.
+Base fm-spawn reproduced the joined export/source zsh failure. Current fm-spawn launched normal and 7209-byte diagnostic commands, passed setup-failure refusal, and propagated trace/Lavish environment only after completed setup.
+Real Pi read challenge.json through its read tool and replied LAUNCH_READY 35077 3e86a1630dbd8535. Both values were absent from the launch brief. The named lab viewer used the helper fixed 40x120 pty and drained its master.
+Candidate hashes, staged diff, and status stayed identical. The actual MealPrep candidate was never accessed. All named lab teardowns and default-session tripwires passed.
+The real-Herdr setup regression passed. The supporting fm-control-relaunch test first failed because TMPDIR was placed inside the repo and its secondmate fixture forbids that location; rerun with normal /tmp test scratch passed. This was test setup, not a launch defect.
+Native Pi session HTML export rendered in isolated Chrome; screenshot and assistant/tool messages retained.
+Claude brief processing remains untested: earlier external-import consent was not granted, and no consent was sought or supplied in this round, per the user instruction. A separately authorized Claude run with that consent is needed to prove it.
+No source changes, linters, formatters, full suite, pipeline control, push, PR, or CI operations. All transient worktree test fixtures including the isolated auth copy were removed.

@@ -1,0 +1,28 @@
+Herdr herdr 0.9.1; Pi 0.87.1
+Provisioned named isolated lab fm-lab-pi-brief-proof-61627-18346
+Public fm-spawn --relaunch exit=0
+notice: nmpi-61625 ships mode=local-only while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned nmpi-61625 harness=pi kind=ship mode=local-only yolo=off window=fm-lab-pi-brief-proof-61627-18346:w1:p1 worktree=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-tmp/pi-live/candidate
+
+unknown command: wait
+run 'herdr --help' for usage
+
+Initial pane:
+candidate ➜ export GOTMPDIR=/tmp/fm-nmpi-61625/gotmp && export COMPACT_ADVISER_DISABLE=1 && export FM_TASK_ID=nmpi-61625 && : > '/tmp/fm-nmpi-61625/launch-setup.s1790315785.61747.540.ready'
+candidate ➜ . '/tmp/fm-nmpi-61625+b5960108c4dae24407bbf10a33966f9fdf03af9aeae06cec2188b36590109ef3/launch.s1790315785.61747.540.sh'
+{
+  "session": "fm-lab-pi-brief-proof-61627-18346",
+  "head": "d0799c59a3f3b1f73e515d62fd262878be02fcd0",
+  "claude": {
+    "result": "untested",
+    "reason": "Prior Claude run stopped at external-import consent; no consent requested or attempted in this round."
+  },
+  "expected_reply": "LAUNCH_READY 33884 ae32d47623a4e47e",
+  "assistant_replies": [
+    "LAUNCH_READY 33884 ae32d47623a4e47e"
+  ],
+  "challenge_read": true,
+  "candidate_identical": true,
+  "pass": true
+}
+Guarded teardown/default-session tripwire exit=0

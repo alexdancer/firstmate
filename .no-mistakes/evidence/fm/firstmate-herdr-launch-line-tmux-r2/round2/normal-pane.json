@@ -1,0 +1,5 @@
+candidate ➜ export GOTMPDIR=/tmp/fm-nmgate-normal-33022/gotmp && export COMPACT_ADVISER_DISABLE=1 && export FM_TASK_ID=n
+mgate-normal-33022 && : > '/tmp/fm-nmgate-normal-33022/launch-setup.s1790315967.38166.17427.ready'
+candidate ➜ . '/tmp/fm-nmgate-normal-33022+fb1e5a3dd2ee4ab55708a80450b0134e72f36e22f48f8ac76b106920bfd0ebcb/launch.s1790
+315967.38166.17427.sh'
+WORKER_STARTED: environment received; candidate preserved

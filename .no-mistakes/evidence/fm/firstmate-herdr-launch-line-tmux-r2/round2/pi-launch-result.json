@@ -1,0 +1,16 @@
+{
+  "session": "fm-lab-pi-brief-proof-29092-602",
+  "head": "2cd26b772c46e7544ce33fdcc244f71401f5efe0",
+  "claude": {
+    "result": "untested",
+    "reason": "Prior Claude run stopped at external-import consent; no consent requested or attempted in this round."
+  },
+  "expected_reply": "LAUNCH_READY 35077 3e86a1630dbd8535",
+  "assistant_replies": [
+    "LAUNCH_READY 35077 3e86a1630dbd8535"
+  ],
+  "challenge_read": true,
+  "candidate_identical": true,
+  "pass": true,
+  "guarded_teardown_exit": 0
+}

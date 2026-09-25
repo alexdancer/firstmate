@@ -1,0 +1,8 @@
+readonly FM_TASK_ID=blocked; : > /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/.local-test-
+tmp/live/blocked/readonly-ready
+candidate ➜ readonly FM_TASK_ID=blocked; : > /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3BH9GJAQT2Z7T9F8BAK50GD/
+.local-test-tmp/live/blocked/readonly-ready
+candidate ➜ export GOTMPDIR=/tmp/fm-nmgate-blocked-33022/gotmp && export COMPACT_ADVISER_DISABLE=1 && export FM_TASK_ID=
+nmgate-blocked-33022 && : > '/tmp/fm-nmgate-blocked-33022/launch-setup.s1790315972.40005.2532.ready'
+zsh: read-only variable: FM_TASK_ID
+candidate ❯                                                                               fm/nmgate-blocked-33022[+?]

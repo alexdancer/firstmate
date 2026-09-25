@@ -1,0 +1,9 @@
+candidate ➜ export GOTMPDIR=/tmp/fm-nmgate-baseline-33022/gotmp                         fm/nmgate-baseline-33022[+?]
+export COMPACT_ADVISER_DISABLE=1
+export FM_TASK_ID=nmgate-baseline-33022
+candidate ➜ export COMPACT_ADVISER_DISABLE=1                                            fm/nmgate-baseline-33022[+?]
+candidate ➜ export FM_TASK_ID=nmgate-baseline-33022. '/tmp/fm-nmgate-baseline-33022+b0331c93b7a7fbdfd4f50dfb42b21b3fefa
+5e313cf60bd607d8f330359d5bd9b/launch.s1790315962.33412.18645.sh'
+export: not valid in this context: /tmp/fm-nmgate-baseline-33022+b0331c93b7a7fbdfd4f50dfb42b21b3fefa5e313cf60bd607d8f33
+0359d5bd9b/launch.s1790315962.33412.18645.sh
+candidate ❯                                                                             fm/nmgate-baseline-33022[+?]

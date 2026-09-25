@@ -1,0 +1,2 @@
+candidate ➜ export GOTMPDIR=/tmp/fm-nmpi-61625/gotmp && export COMPACT_ADVISER_DISABLE=1 && export FM_TASK_ID=nmpi-61625 && : > '/tmp/fm-nmpi-61625/launch-setup.s1790315785.61747.540.ready'
+candidate ➜ . '/tmp/fm-nmpi-61625+b5960108c4dae24407bbf10a33966f9fdf03af9aeae06cec2188b36590109ef3/launch.s1790315785.61747.540.sh'
