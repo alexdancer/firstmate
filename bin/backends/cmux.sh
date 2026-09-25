@@ -596,8 +596,16 @@ fm_backend_cmux_window_of_workspace() {  # <workspace_id> -> "<window_id> <count
   return 0
 }
 
-# fm_backend_cmux_kill: remove the task's whole workspace, best-effort (mirrors
-# every other backend's `kill` `|| true` contract). A cmux task owns one
+fm_backend_cmux_workspace_confirmed_gone() {  # <workspace_id>
+  local result
+  result=$(fm_backend_cmux_cli list-panes --workspace "$1" --json --id-format uuids 2>&1) && return 1
+  case "$result" in
+    *'not_found: Workspace not found'*|*'not_found: workspace not found'*) return 0 ;;
+  esac
+  return 1
+}
+
+# fm_backend_cmux_kill: remove the task's whole workspace. A cmux task owns one
 # workspace, so teardown reclaims that workspace and all of its surfaces.
 #
 # The selected-workspace teardown bug (docs/cmux-backend.md "Closing the last
@@ -614,15 +622,23 @@ fm_backend_cmux_window_of_workspace() {  # <workspace_id> -> "<window_id> <count
 # recovery/list_live ignore it) - cmux's own "closed the last tab" outcome.
 fm_backend_cmux_kill() {  # <target> [unused] [expected-label]
   local expected_label=${3:-} wsid wininfo win count
-  fm_backend_cmux_target_ready "$1" "$expected_label" || return 0
+  fm_backend_cmux_parse_target "$1" || return 1
   wsid=$FM_BACKEND_CMUX_WORKSPACE
-  wininfo=$(fm_backend_cmux_window_of_workspace "$wsid") || wininfo=
+  fm_backend_cmux_target_ready "$1" "$expected_label" || {
+    fm_backend_cmux_workspace_confirmed_gone "$wsid"
+    return $?
+  }
+  wsid=$FM_BACKEND_CMUX_WORKSPACE
+  wininfo=$(fm_backend_cmux_window_of_workspace "$wsid") || return 1
   win=${wininfo%% *}
   count=${wininfo##* }
-  if [ -n "$win" ] && [ "$count" = 1 ]; then
-    fm_backend_cmux_cli new-workspace --window "$win" --focus false --id-format uuids >/dev/null 2>&1 || true
-  fi
-  fm_backend_cmux_cli close-workspace --workspace "$wsid" >/dev/null 2>&1 || true
+  [ -n "$win" ] || return 1
+  case "$count" in
+    1) fm_backend_cmux_cli new-workspace --window "$win" --focus false --id-format uuids >/dev/null 2>&1 || return 1 ;;
+    *[!0-9]*|'') return 1 ;;
+  esac
+  fm_backend_cmux_cli close-workspace --workspace "$wsid" >/dev/null 2>&1 || return 1
+  fm_backend_cmux_workspace_confirmed_gone "$wsid"
 }
 
 # fm_backend_cmux_list_live: recovery/orphan discovery. Lists every workspace

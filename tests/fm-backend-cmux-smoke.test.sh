@@ -163,14 +163,12 @@ pass "real cmux: window_of_workspace locates a task workspace's window and count
 
 # --- kill: whole-workspace close ----------------------------------------------
 
-fm_backend_cmux_kill "$TARGET"
+fm_backend_cmux_kill "$TARGET" || fail "kill could not confirm closure of the exact workspace"
 sleep 0.5
 STILL_LIVE=$(fm_backend_cmux_cli workspace list --json --id-format uuids 2>/dev/null | jq -r --arg id "$WS1" '.workspaces[]? | select(.id == $id) | .id' 2>/dev/null)
 [ -z "$STILL_LIVE" ] || fail "kill did not remove the whole task workspace"
 WS1=""
-# Best-effort contract: killing an already-gone target must not error.
-fm_backend_cmux_kill "$TARGET" || fail "kill on an already-dead target must stay best-effort (never fail)"
-pass "real cmux: kill removes the whole workspace and is idempotent/best-effort"
+pass "real cmux: kill removes the whole workspace"
 
 # --- list_live (title-based recovery discovery) ------------------------------
 

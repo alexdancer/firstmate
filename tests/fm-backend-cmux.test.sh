@@ -56,6 +56,7 @@ next=$(( $(cat "$COUNT_FILE" 2>/dev/null || echo 0) + 1 ))
 n=$next
 echo "$n" > "$COUNT_FILE"
 if [ -f "$RESP/$n.exit" ]; then
+  [ ! -f "$RESP/$n.out" ] || cat "$RESP/$n.out"
   exit "$(cat "$RESP/$n.exit")"
 fi
 [ -f "$RESP/$n.out" ] && cat "$RESP/$n.out"
@@ -1098,6 +1099,8 @@ test_kill_closes_workspace_directly_when_not_last() {
   cmux_panes_response "$dir" 1 "bbbbbbbb-1111-1111-1111-111111111111"
   cmux_windows_response "$dir" 2 "eeeeeeee-0000-0000-0000-000000000000" 2
   cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "the-task" "ffffffff-0000-0000-0000-000000000000" "other"
+  printf '1\n' > "$dir/responses/5.exit"
+  printf 'Error: not_found: Workspace not found\n' > "$dir/responses/5.out"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
@@ -1119,6 +1122,8 @@ test_kill_adds_sibling_when_last_in_window() {
   cmux_panes_response "$dir" 1 "bbbbbbbb-1111-1111-1111-111111111111"
   cmux_windows_response "$dir" 2 "eeeeeeee-0000-0000-0000-000000000000" 2
   cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "the-task"
+  printf '1\n' > "$dir/responses/6.exit"
+  printf 'Error: not_found: Workspace not found\n' > "$dir/responses/6.out"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
@@ -1135,7 +1140,7 @@ test_kill_adds_sibling_when_last_in_window() {
   pass "fm_backend_cmux_kill: adds a throwaway sibling then closes the target when it is the last workspace in its window"
 }
 
-test_kill_is_best_effort_when_close_workspace_fails() {
+test_kill_refuses_failed_close_workspace() {
   local dir fb
   dir="$TMP_ROOT/kill-workspace-fail"; mkdir -p "$dir/responses"
   cmux_panes_response "$dir" 1 "bbbbbbbb-1111-1111-1111-111111111111"
@@ -1145,12 +1150,44 @@ test_kill_is_best_effort_when_close_workspace_fails() {
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
-  expect_code 0 $? "kill must stay best-effort (never fail) even when close-workspace fails"
+  [ "$?" -ne 0 ] || fail "kill accepted a failed close-workspace command"
   assert_contains "$(cat "$dir/log")" $'\x1f''close-workspace'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000' \
     "kill should still attempt close-workspace"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-surface' \
     "kill should not call close-surface"
-  pass "fm_backend_cmux_kill: never fails even when close-workspace fails"
+  pass "fm_backend_cmux_kill: refuses a failed close-workspace command"
+}
+
+test_kill_refuses_unconfirmed_close() {
+  local dir fb
+  dir="$TMP_ROOT/kill-unconfirmed-close"; mkdir -p "$dir/responses"
+  cmux_panes_response "$dir" 1 "bbbbbbbb-1111-1111-1111-111111111111"
+  cmux_windows_response "$dir" 2 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "the-task" "ffffffff-0000-0000-0000-000000000000" "other"
+  cmux_panes_response "$dir" 5 "bbbbbbbb-1111-1111-1111-111111111111"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
+  [ "$?" -ne 0 ] || fail "kill accepted a success-shaped close while the exact endpoint remained live"
+  assert_contains "$(cat "$dir/log")" $'\x1f''close-workspace'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000' \
+    "kill did not attempt the exact close"
+  pass "fm_backend_cmux_kill: refuses a close that leaves the exact endpoint live"
+}
+
+test_kill_accepts_typed_workspace_absence() {
+  local dir fb
+  dir="$TMP_ROOT/kill-already-gone"; mkdir -p "$dir/responses"
+  printf '1\n' > "$dir/responses/1.exit"
+  printf 'Error: not_found: Workspace not found\n' > "$dir/responses/1.out"
+  printf '1\n' > "$dir/responses/2.exit"
+  printf 'Error: not_found: Workspace not found\n' > "$dir/responses/2.out"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
+  expect_code 0 $? "kill should accept typed absence of the exact workspace"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''close-workspace' \
+    "kill attempted to close an already absent workspace"
+  pass "fm_backend_cmux_kill: accepts typed absence on a repeated cleanup"
 }
 
 test_kill_refuses_unlabeled_changed_surface() {
@@ -1160,6 +1197,7 @@ test_kill_refuses_unlabeled_changed_surface() {
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
+  [ "$?" -ne 0 ] || fail "kill accepted a missing recorded surface as a completed close"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-workspace' \
     "kill closed a workspace after its recorded surface disappeared"
   pass "fm_backend_cmux_kill: refuses an unlabeled changed surface"
@@ -1205,7 +1243,7 @@ test_kill_refuses_stale_target_with_same_title() {
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "" fm-label' "$ROOT"
-  expect_code 0 $? "kill should remain best-effort for a stale target"
+  [ "$?" -ne 0 ] || fail "kill accepted an unverified stale target as closed"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-workspace' \
     "kill closed a same-title workspace without exact identity"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-surface' \
@@ -1317,7 +1355,9 @@ test_window_of_workspace_empty_when_not_found
 test_window_of_workspace_refuses_incomplete_scan
 test_kill_closes_workspace_directly_when_not_last
 test_kill_adds_sibling_when_last_in_window
-test_kill_is_best_effort_when_close_workspace_fails
+test_kill_refuses_failed_close_workspace
+test_kill_refuses_unconfirmed_close
+test_kill_accepts_typed_workspace_absence
 test_kill_refuses_unlabeled_changed_surface
 test_live_cleanup_guard_requires_exact_surface
 test_live_cleanup_guard_closes_exact_surface

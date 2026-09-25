@@ -16,11 +16,12 @@ SEND_FAILURE_ID="cmux-pi-send-fail-$$"
 ENTER_FAILURE_ID="cmux-pi-enter-fail-$$"
 PUBLISH_FAILURE_ID="cmux-pi-publish-fail-$$"
 DISPATCH_FAILURE_ID="cmux-pi-dispatch-fail-$$"
+WORKTREE_FAILURE_ID="cmux-pi-worktree-fail-$$"
 TMUX_FAILURE_ID="tmux-pi-send-fail-$$"
 
 cleanup_launch_tmp() {
-  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID" "/tmp/fm-$SEND_FAILURE_ID" "/tmp/fm-$ENTER_FAILURE_ID" "/tmp/fm-$PUBLISH_FAILURE_ID" "/tmp/fm-$DISPATCH_FAILURE_ID" "/tmp/fm-$TMUX_FAILURE_ID"
-  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" -o -name "fm-$SEND_FAILURE_ID+*" -o -name "fm-$ENTER_FAILURE_ID+*" -o -name "fm-$PUBLISH_FAILURE_ID+*" -o -name "fm-$DISPATCH_FAILURE_ID+*" -o -name "fm-$TMUX_FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
+  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID" "/tmp/fm-$SEND_FAILURE_ID" "/tmp/fm-$ENTER_FAILURE_ID" "/tmp/fm-$PUBLISH_FAILURE_ID" "/tmp/fm-$DISPATCH_FAILURE_ID" "/tmp/fm-$WORKTREE_FAILURE_ID" "/tmp/fm-$TMUX_FAILURE_ID"
+  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" -o -name "fm-$SEND_FAILURE_ID+*" -o -name "fm-$ENTER_FAILURE_ID+*" -o -name "fm-$PUBLISH_FAILURE_ID+*" -o -name "fm-$DISPATCH_FAILURE_ID+*" -o -name "fm-$WORKTREE_FAILURE_ID+*" -o -name "fm-$TMUX_FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
   fm_test_cleanup
 }
 trap cleanup_launch_tmp EXIT INT TERM
@@ -61,7 +62,12 @@ case "${1:-}" in
     ;;
 esac
 if [ "${1:-}" = workspace ] && [ "${2:-}" = list ]; then
-  # The current-window projection remains empty after creation.
+  for arg in "$@"; do
+    if [ "$arg" = --window ]; then
+      printf '%s\n' '{"workspaces":[{"id":"aaaaaaaa-0000-0000-0000-000000000000","title":"fm-task"},{"id":"ffffffff-0000-0000-0000-000000000000","title":"other"}]}'
+      exit 0
+    fi
+  done
   printf '%s\n' '{"workspaces":[]}'
   exit 0
 fi
@@ -70,6 +76,9 @@ if [ "${1:-}" = workspace ] && [ "${2:-}" = create ]; then
   exit 0
 fi
 case "${1:-}" in
+  list-windows)
+    printf '%s\n' '[{"id":"eeeeeeee-0000-0000-0000-000000000000"}]'
+    ;;
   list-panes)
     printf '%s\n' '{"panes":[{"selected_surface_id":"bbbbbbbb-1111-1111-1111-111111111111","surface_ids":["bbbbbbbb-1111-1111-1111-111111111111"]}]}'
     ;;
@@ -137,8 +146,8 @@ $1
 EOF_CASE
 }
 
-run_case_spawn() {  # <id> <emit-pi-event> [fail-launch-send] [fail-launch-enter]
-  local id=$1 emit=$2 fail_send=${3:-0} fail_enter=${4:-0}
+run_case_spawn() {  # <id> <emit-pi-event> [fail-launch-send] [fail-launch-enter] [reported-path]
+  local id=$1 emit=$2 fail_send=${3:-0} fail_enter=${4:-0} reported_path=${5:-$COPY_DIR}
   FM_FAKE_CMUX_LOG="$CASE_DIR/cmux.log" \
     FM_FAKE_CMUX_LAST_LITERAL="$CASE_DIR/last-literal" \
     FM_FAKE_CMUX_LAUNCH_MARKER="$CASE_DIR/launch-attempted" \
@@ -147,7 +156,7 @@ run_case_spawn() {  # <id> <emit-pi-event> [fail-launch-send] [fail-launch-enter
     FM_FAKE_CMUX_FAIL_LAUNCH_SEND="$fail_send" \
     FM_FAKE_CMUX_FAIL_LAUNCH_ENTER="$fail_enter" \
     FM_FAKE_CMUX_START_PI="$emit" FM_FAKE_CMUX_ID="$id" \
-    FM_FAKE_CMUX_WT="$COPY_DIR" FM_FAKE_ROOT="$ROOT" \
+    FM_FAKE_CMUX_WT="$reported_path" FM_FAKE_ROOT="$ROOT" \
     FM_FAKE_TMUX_FALLBACK_LOG="$CASE_DIR/tmux-fallback.log" \
     fm_test_run_spawn "$HOME_DIR" "$COPY_DIR" "$FAKEBIN_DIR" \
       "$id" "$PROJECT_DIR" --scout --harness pi --backend cmux
@@ -330,6 +339,33 @@ SH
   pass "fm-spawn preserves exact cmux recovery after failed backlog dispatch"
 }
 
+test_spawn_recovers_exact_endpoint_before_worktree_confirmation() {
+  local fixture out status record
+  fixture=$(make_case worktree-failure "$WORKTREE_FAILURE_ID")
+  read_case "$fixture"
+  out=$(run_case_spawn "$WORKTREE_FAILURE_ID" 0 0 0 "$PROJECT_DIR")
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn accepted a cmux Pi endpoint that never entered its isolated copy"
+  assert_contains "$out" 'treehouse get did not enter an isolated worktree' \
+    "spawn did not reach the worktree discovery refusal"
+  record="$HOME_DIR/state/$WORKTREE_FAILURE_ID.cmux-launch-recovery"
+  assert_present "$record" "pre-launch abort left no exact endpoint recovery record"
+  assert_grep 'endpoint=aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111' "$record" \
+    "pre-launch recovery lost the exact cmux endpoint"
+  grep -Fx 'worktree=' "$record" >/dev/null \
+    || fail "pre-launch recovery claimed an unverified worktree path"
+  assert_grep "project=$PROJECT_DIR" "$record" \
+    "pre-launch recovery lost the spawning project"
+  assert_absent "$HOME_DIR/state/$WORKTREE_FAILURE_ID.meta" \
+    "pre-launch abort published an unverified worker"
+  assert_present "$COPY_DIR/README.md" "pre-launch abort lost the isolated project copy"
+  out=$(run_case_spawn "$WORKTREE_FAILURE_ID" 0)
+  [ "$?" -ne 0 ] || fail "spawn retried while the early failure's endpoint remained unresolved"
+  assert_contains "$out" 'has an unresolved cmux launch' \
+    "pre-launch recovery did not block an unsafe retry"
+  pass "fm-spawn retains exact cmux recovery when worktree discovery aborts"
+}
+
 test_spawn_propagates_tmux_launch_send_failure() {
   local fixture out status
   fixture=$(make_case tmux-send-failure "$TMUX_FAILURE_ID")
@@ -363,6 +399,7 @@ test_spawn_refuses_cmux_launch_send_failure
 test_spawn_refuses_cmux_launch_enter_failure
 test_spawn_closes_started_pi_after_record_publication_failure
 test_spawn_retains_exact_recovery_after_dispatch_rollback
+test_spawn_recovers_exact_endpoint_before_worktree_confirmation
 test_spawn_propagates_tmux_launch_send_failure
 
 echo "# all cmux Pi launch confirmation tests passed"

@@ -1171,6 +1171,7 @@ SPAWN_META_PUBLISH_STARTED=0
 SPAWN_FRESH_COMMIT_PENDING=0
 SPAWN_DEFER_CMUX_PI_PUBLISH=0
 SPAWN_CMUX_PI_START_CONFIRMED=0
+SPAWN_CMUX_PI_RECOVERY_ARMED=0
 SPAWN_TASK_SET_LOCK=
 SPAWN_TASK_SET_LOCK_HELD=0
 SPAWN_TREEHOUSE_PROJECT_LOCK=
@@ -1214,8 +1215,41 @@ parse_orca_worktree_result() {
   fi
 }
 
+cmux_pi_spawn_fail() {  # <detail>
+  local detail=$1 recovery="$STATE/$ID.cmux-launch-recovery" stage= recovery_note= copy=${WT:-}
+  SPAWN_CMUX_PI_RECOVERY_ARMED=0
+  stage=$(mktemp "$STATE/.$ID.cmux-launch-recovery.XXXXXX" 2>/dev/null) || stage=
+  if [ -n "$stage" ]; then
+    if ! printf 'task_id=%s\nendpoint=%s\nworktree=%s\nproject=%s\nharness=%s\npi_start_confirmed=%s\nclosure=unverified\n' \
+      "$ID" "$T" "$copy" "$PROJ_ABS" "$HARNESS" "$SPAWN_CMUX_PI_START_CONFIRMED" >"$stage"; then
+      echo "error: could not write cmux launch recovery at $stage" >&2
+      rm -f "$stage" 2>/dev/null || true
+    elif ! fm_backlog_atomic_transition publish "$stage" "$recovery" "cmux launch recovery" "$STATE"; then
+      echo "error: could not publish cmux launch recovery at $recovery" >&2
+      recovery_note="staged recovery record: $stage"
+    else
+      recovery_note="recovery record: $recovery"
+    fi
+  else
+    echo "error: could not stage cmux launch recovery at $recovery" >&2
+  fi
+  fm_backend_cmux_kill "$T" 2>/dev/null || true
+  [ -n "$recovery_note" ] || recovery_note="recovery record could not be published"
+  if [ -n "$copy" ]; then
+    detail="$detail; exact cmux endpoint $T closure is unverified, and the isolated project copy is preserved at $copy; $recovery_note"
+  else
+    detail="$detail; exact cmux endpoint $T closure is unverified, and any isolated project copy remains in place but its path was not verified; $recovery_note"
+  fi
+  printf '%s\n' "$(status_stamp_line "failed: $detail")" >>"$STATE/$ID.status"
+  echo "error: $detail" >&2
+}
+
 spawn_abort_cleanup() {
   local status=$?
+  if [ "$SPAWN_CMUX_PI_RECOVERY_ARMED" = 1 ]; then
+    cmux_pi_spawn_fail "spawn aborted before its cmux Pi worker was committed" || true
+    status=1
+  fi
   if [ "$RELAUNCH_REPLACEMENT_PENDING" = 1 ] &&
     [ "$SPAWN_META_PUBLISH_STARTED" = 1 ] &&
     [ -n "$SPAWN_META_TMP" ] &&
@@ -3640,6 +3674,9 @@ EOF
       exit 1
     fi
     T="$CMUX_WORKSPACE_ID:$CMUX_SURFACE_ID"
+    case "$HARNESS" in
+      pi|pi-signed) SPAWN_CMUX_PI_RECOVERY_ARMED=1 ;;
+    esac
     ;;
   orca)
     set +e
@@ -3735,30 +3772,6 @@ cmux_pi_wait_for_processing() {
     [ "$i" -ge 60 ] || sleep 0.5
   done
   return 1
-}
-
-cmux_pi_spawn_fail() {  # <detail>
-  local detail=$1 recovery="$STATE/$ID.cmux-launch-recovery" stage= recovery_note=
-  stage=$(mktemp "$STATE/.$ID.cmux-launch-recovery.XXXXXX" 2>/dev/null) || stage=
-  if [ -n "$stage" ]; then
-    if ! printf 'task_id=%s\nendpoint=%s\nworktree=%s\nproject=%s\nharness=%s\npi_start_confirmed=%s\nclosure=unverified\n' \
-      "$ID" "$T" "$WT" "$PROJ_ABS" "$HARNESS" "$SPAWN_CMUX_PI_START_CONFIRMED" >"$stage"; then
-      echo "error: could not write cmux launch recovery at $stage" >&2
-      rm -f "$stage" 2>/dev/null || true
-    elif ! fm_backlog_atomic_transition publish "$stage" "$recovery" "cmux launch recovery" "$STATE"; then
-      echo "error: could not publish cmux launch recovery at $recovery" >&2
-      recovery_note="staged recovery record: $stage"
-    else
-      recovery_note="recovery record: $recovery"
-    fi
-  else
-    echo "error: could not stage cmux launch recovery at $recovery" >&2
-  fi
-  fm_backend_cmux_kill "$T" 2>/dev/null || true
-  [ -n "$recovery_note" ] || recovery_note="recovery record could not be published"
-  detail="$detail; exact cmux endpoint $T closure is unverified, and the isolated project copy is preserved at $WT; $recovery_note"
-  printf '%s\n' "$(status_stamp_line "failed: $detail")" >>"$STATE/$ID.status"
-  echo "error: $detail" >&2
 }
 
 kimi_capture() {
@@ -5292,11 +5305,13 @@ SPAWN_BACKLOG_COMMIT_STATUS=0
 FM_TASKS_AXI_TIMEOUT=${FM_TASKS_AXI_TIMEOUT:-30}
 if spawn_commit_backlog_transition; then
   SPAWN_FRESH_COMMIT_PENDING=0
+  SPAWN_CMUX_PI_RECOVERY_ARMED=0
 else
   SPAWN_BACKLOG_COMMIT_STATUS=$?
   if spawn_commit_backlog_transition; then
     SPAWN_BACKLOG_COMMIT_STATUS=0
     SPAWN_FRESH_COMMIT_PENDING=0
+    SPAWN_CMUX_PI_RECOVERY_ARMED=0
   fi
 fi
 if [ "$SPAWN_BACKLOG_COMMIT_STATUS" -ne 0 ]; then
