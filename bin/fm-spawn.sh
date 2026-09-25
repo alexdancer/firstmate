@@ -1216,7 +1216,7 @@ parse_orca_worktree_result() {
 }
 
 cmux_pi_spawn_fail() {  # <detail>
-  local detail=$1 recovery="$STATE/$ID.cmux-launch-recovery" stage= recovery_note= copy=${WT:-}
+  local detail=$1 recovery="$STATE/$ID.cmux-launch-recovery" stage= recovery_note= copy=${WT:-} closure=unverified source= confirmed_stage=
   SPAWN_CMUX_PI_RECOVERY_ARMED=0
   stage=$(mktemp "$STATE/.$ID.cmux-launch-recovery.XXXXXX" 2>/dev/null) || stage=
   if [ -n "$stage" ]; then
@@ -1233,12 +1233,35 @@ cmux_pi_spawn_fail() {  # <detail>
   else
     echo "error: could not stage cmux launch recovery at $recovery" >&2
   fi
-  fm_backend_cmux_kill "$T" 2>/dev/null || true
+  if fm_backend_cmux_kill "$T" 2>/dev/null; then
+    closure=confirmed
+    if [ -f "$recovery" ]; then
+      source=$recovery
+    elif [ -n "$stage" ] && [ -f "$stage" ]; then
+      source=$stage
+    fi
+    if [ -n "$source" ]; then
+      confirmed_stage=$(mktemp "$STATE/.$ID.cmux-launch-recovery.XXXXXX" 2>/dev/null) || confirmed_stage=
+      if [ -n "$confirmed_stage" ] &&
+        sed 's/^closure=unverified$/closure=confirmed/' "$source" >"$confirmed_stage"; then
+        if fm_backlog_atomic_transition publish "$confirmed_stage" "$recovery" "cmux launch recovery" "$STATE"; then
+          recovery_note="recovery record: $recovery"
+          [ "$source" = "$recovery" ] || rm -f "$source" 2>/dev/null || true
+        else
+          recovery_note="staged confirmed recovery record: $confirmed_stage"
+        fi
+      else
+        [ -z "$confirmed_stage" ] || rm -f "$confirmed_stage" 2>/dev/null || true
+        echo "error: could not stage confirmed cmux closure at $recovery" >&2
+        recovery_note="confirmed closure could not be saved in $recovery"
+      fi
+    fi
+  fi
   [ -n "$recovery_note" ] || recovery_note="recovery record could not be published"
   if [ -n "$copy" ]; then
-    detail="$detail; exact cmux endpoint $T closure is unverified, and the isolated project copy is preserved at $copy; $recovery_note"
+    detail="$detail; exact cmux endpoint $T closure is $closure, and the isolated project copy is preserved at $copy; $recovery_note"
   else
-    detail="$detail; exact cmux endpoint $T closure is unverified, and any isolated project copy remains in place but its path was not verified; $recovery_note"
+    detail="$detail; exact cmux endpoint $T closure is $closure, and any isolated project copy remains in place but its path was not verified; $recovery_note"
   fi
   printf '%s\n' "$(status_stamp_line "failed: $detail")" >>"$STATE/$ID.status"
   echo "error: $detail" >&2
@@ -1681,7 +1704,7 @@ if ! fm_lock_try_acquire "$SPAWN_TASK_LOCK"; then
 fi
 SPAWN_TASK_LOCK_HELD=1
 if [ -e "$STATE/$ID.cmux-launch-recovery" ] || [ -L "$STATE/$ID.cmux-launch-recovery" ]; then
-  echo "error: task $ID has an unresolved cmux launch at $STATE/$ID.cmux-launch-recovery; inspect and resolve that exact endpoint before retrying" >&2
+  echo "error: task $ID has an unresolved cmux launch recovery at $STATE/$ID.cmux-launch-recovery; inspect its recorded closure and preserved project copy before retrying" >&2
   exit 1
 fi
 PROJ=

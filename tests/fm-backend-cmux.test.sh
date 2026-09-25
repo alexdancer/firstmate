@@ -1225,13 +1225,39 @@ test_live_cleanup_guard_closes_exact_surface() {
   title=$(cmux_expected_scoped_title fm-test-guard)
   cmux_workspace_list_response "$dir" 1 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
   cmux_panes_response "$dir" 2 "bbbbbbbb-1111-1111-1111-111111111111"
+  cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
+  cmux_panes_response "$dir" 4 "bbbbbbbb-1111-1111-1111-111111111111"
+  cmux_windows_response "$dir" 5 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 6 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
+  printf '1\n' > "$dir/responses/9.exit"
+  printf 'Error: not_found: Workspace not found\n' > "$dir/responses/9.out"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; . "$0/tests/cmux-test-safety.sh"; cmux_safe_close_workspace "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" fm-test-guard' "$ROOT"
   expect_code 0 $? "live cleanup guard should accept its exact surface"
+  assert_contains "$(cat "$dir/log")" $'\x1f''new-workspace'$'\x1f''--window'$'\x1f''eeeeeeee-0000-0000-0000-000000000000' \
+    "live cleanup guard did not add a sibling for the last workspace"
   assert_contains "$(cat "$dir/log")" $'\x1f''close-workspace'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000' \
     "live cleanup guard did not close the exact workspace"
   pass "live cmux cleanup guard closes its exact surface"
+}
+
+test_live_cleanup_guard_refuses_unconfirmed_close() {
+  local dir fb title
+  dir="$TMP_ROOT/safe-close-unconfirmed"; mkdir -p "$dir/responses"
+  title=$(cmux_expected_scoped_title fm-test-guard)
+  cmux_workspace_list_response "$dir" 1 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
+  cmux_panes_response "$dir" 2 "bbbbbbbb-1111-1111-1111-111111111111"
+  cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
+  cmux_panes_response "$dir" 4 "bbbbbbbb-1111-1111-1111-111111111111"
+  cmux_windows_response "$dir" 5 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 6 "aaaaaaaa-0000-0000-0000-000000000000" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
+  cmux_panes_response "$dir" 8 "bbbbbbbb-1111-1111-1111-111111111111"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; . "$0/tests/cmux-test-safety.sh"; cmux_safe_close_workspace "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" fm-test-guard' "$ROOT"
+  [ "$?" -ne 0 ] || fail "live cleanup accepted a success-shaped close that left the test worker live"
+  pass "live cmux cleanup guard refuses an unconfirmed workspace close"
 }
 
 test_kill_refuses_stale_target_with_same_title() {
@@ -1361,6 +1387,7 @@ test_kill_accepts_typed_workspace_absence
 test_kill_refuses_unlabeled_changed_surface
 test_live_cleanup_guard_requires_exact_surface
 test_live_cleanup_guard_closes_exact_surface
+test_live_cleanup_guard_refuses_unconfirmed_close
 test_kill_refuses_stale_target_with_same_title
 test_list_live_filters_by_title_prefix
 test_secondmate_spawn_refuses_cmux_backend

@@ -3446,11 +3446,6 @@ if [ "$BACKEND" = herdr ]; then
   TEARDOWN_HERDR_PANE=$FM_BACKEND_HERDR_PANE
 fi
 
-if [ "$BACKEND" = cmux ] && [ "$TEARDOWN_WINDOWLESS" != 1 ]; then
-  fm_backend_kill "$BACKEND" "$T" "$(meta_value "$META" zellij_tab_id)" "fm-$ID" \
-    || { endpoint_close_refusal "$ID" "$BACKEND" "$T" 0; exit 1; }
-fi
-
 BACKLOG_CLOSED=0
 BACKLOG_TRANSITION=$TEARDOWN_BACKLOG_TRANSITION
 BACKLOG_TRANSITION_FLAGS=()
@@ -3527,6 +3522,11 @@ else
   else
     BACKLOG_SKIP_REASON=$TEARDOWN_BACKLOG_SKIP_REASON
   fi
+fi
+
+if [ "$BACKEND" = cmux ] && [ "$TEARDOWN_WINDOWLESS" != 1 ]; then
+  fm_backend_kill "$BACKEND" "$T" "$(meta_value "$META" zellij_tab_id)" "fm-$ID" \
+    || { endpoint_close_refusal "$ID" "$BACKEND" "$T" 0; exit 1; }
 fi
 
 # Every landed/discard-work refusal above has now passed (or --force skipped

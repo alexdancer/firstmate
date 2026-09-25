@@ -41,12 +41,9 @@ cmux_refuse_if_unsafe() {  # <target> <want_label>
 
 # cmux_safe_close_workspace: the ONLY sanctioned way for a test to tear down
 # a workspace it created. Guards first (cmux_refuse_if_unsafe), then closes
-# the whole workspace (never a bulk/enumerate-based close). Best-effort past
-# the guard (a workspace already gone must not fail the caller's cleanup
-# trap) - but the guard itself is NOT best-effort: a refusal here means
-# cleanup leaves the isolated, throwaway workspace for that fm-test- label open
-# rather than risk the wrong target.
+# the whole workspace (never a bulk/enumerate-based close). A refusal leaves
+# the isolated, throwaway workspace for that fm-test- label open.
 cmux_safe_close_workspace() {  # <target> <want_label>
   cmux_refuse_if_unsafe "$1" "$2" || return 1
-  fm_backend_cmux_cli close-workspace --workspace "$FM_BACKEND_CMUX_WORKSPACE" >/dev/null 2>&1 || true
+  fm_backend_cmux_kill "$1" "" "$2"
 }

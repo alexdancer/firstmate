@@ -80,7 +80,14 @@ case "${1:-}" in
     printf '%s\n' '[{"id":"eeeeeeee-0000-0000-0000-000000000000"}]'
     ;;
   list-panes)
+    if [ -f "${FM_FAKE_CMUX_CLOSED:?}" ]; then
+      printf '%s\n' 'Error: not_found: Workspace not found' >&2
+      exit 1
+    fi
     printf '%s\n' '{"panes":[{"selected_surface_id":"bbbbbbbb-1111-1111-1111-111111111111","surface_ids":["bbbbbbbb-1111-1111-1111-111111111111"]}]}'
+    ;;
+  close-workspace)
+    [ "${FM_FAKE_CMUX_CONFIRM_CLOSE:-0}" != 1 ] || : > "${FM_FAKE_CMUX_CLOSED:?}"
     ;;
   send)
     last=
@@ -146,13 +153,15 @@ $1
 EOF_CASE
 }
 
-run_case_spawn() {  # <id> <emit-pi-event> [fail-launch-send] [fail-launch-enter] [reported-path]
-  local id=$1 emit=$2 fail_send=${3:-0} fail_enter=${4:-0} reported_path=${5:-$COPY_DIR}
+run_case_spawn() {  # <id> <emit-pi-event> [fail-launch-send] [fail-launch-enter] [reported-path] [confirm-close]
+  local id=$1 emit=$2 fail_send=${3:-0} fail_enter=${4:-0} reported_path=${5:-$COPY_DIR} confirm_close=${6:-0}
   FM_FAKE_CMUX_LOG="$CASE_DIR/cmux.log" \
     FM_FAKE_CMUX_LAST_LITERAL="$CASE_DIR/last-literal" \
     FM_FAKE_CMUX_LAUNCH_MARKER="$CASE_DIR/launch-attempted" \
     FM_FAKE_CMUX_EARLY_META="$CASE_DIR/early-meta" \
     FM_FAKE_CMUX_EARLY_BUSY="$CASE_DIR/early-busy" \
+    FM_FAKE_CMUX_CLOSED="$CASE_DIR/closed" \
+    FM_FAKE_CMUX_CONFIRM_CLOSE="$confirm_close" \
     FM_FAKE_CMUX_FAIL_LAUNCH_SEND="$fail_send" \
     FM_FAKE_CMUX_FAIL_LAUNCH_ENTER="$fail_enter" \
     FM_FAKE_CMUX_START_PI="$emit" FM_FAKE_CMUX_ID="$id" \
@@ -163,7 +172,7 @@ run_case_spawn() {  # <id> <emit-pi-event> [fail-launch-send] [fail-launch-enter
 }
 
 assert_cmux_recovery_record() {
-  local confirmed=$2 record="$HOME_DIR/state/$1.cmux-launch-recovery" contents
+  local confirmed=$2 closure=${3:-unverified} record="$HOME_DIR/state/$1.cmux-launch-recovery" contents
   assert_present "$record" "failed cmux Pi launch left no exact endpoint recovery record"
   contents=$(cat "$record")
   assert_contains "$contents" "endpoint=aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" \
@@ -172,8 +181,8 @@ assert_cmux_recovery_record() {
     "cmux recovery record lost the isolated project copy"
   assert_contains "$contents" "pi_start_confirmed=$confirmed" \
     "cmux recovery record misstates Pi launch confirmation"
-  assert_contains "$contents" 'closure=unverified' \
-    "cmux recovery record treats a close attempt as proven closure"
+  assert_contains "$contents" "closure=$closure" \
+    "cmux recovery record misstated the exact endpoint closure"
 }
 
 test_spawn_accepts_only_after_pi_agent_start() {
@@ -320,14 +329,16 @@ case "${1:-}" in
 esac
 SH
   chmod +x "$FAKEBIN_DIR/tasks-axi"
-  out=$(run_case_spawn "$DISPATCH_FAILURE_ID" 1)
+  out=$(run_case_spawn "$DISPATCH_FAILURE_ID" 1 0 0 "$COPY_DIR" 1)
   status=$?
   [ "$status" -ne 0 ] || fail "spawn accepted Pi after both backlog dispatch attempts failed"
   assert_present "$CASE_DIR/launch-attempted" "dispatch failure did not launch Pi"
   [ "$(wc -l < "$CASE_DIR/cmux.log.dispatch")" -eq 2 ] || fail "dispatch failure did not exercise both start attempts"
   assert_contains "$out" 'backlog item could not be moved to In flight' \
     "spawn did not report the failed backlog dispatch"
-  assert_cmux_recovery_record "$DISPATCH_FAILURE_ID" 1
+  assert_cmux_recovery_record "$DISPATCH_FAILURE_ID" 1 confirmed
+  assert_contains "$out" 'closure is confirmed' \
+    "failed dispatch did not report confirmed endpoint closure"
   assert_absent "$HOME_DIR/state/$DISPATCH_FAILURE_ID.meta" \
     "failed dispatch retained an ordinary worker record"
   assert_absent "$HOME_DIR/state/$DISPATCH_FAILURE_ID.busy-state" \
