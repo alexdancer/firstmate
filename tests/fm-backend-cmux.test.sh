@@ -479,21 +479,41 @@ test_create_task_creates_and_parses_ids() {
   title=$(cmux_expected_scoped_title fm-newtask)
   # 1: workspace list --json (pre-create duplicate check) -> no match
   printf '{"workspaces":[]}' > "$dir/responses/1.out"
-  # 2: new-workspace (silent on success)
-  # 3: workspace list --json (post-create id resolution) -> match
-  cmux_workspace_list_response "$dir" 3 "bbbbbbbb-1111-1111-1111-111111111111" "$title"
-  # 4: list-panes --json --id-format uuids -> default surface id
-  cmux_panes_response "$dir" 4 "cccccccc-2222-2222-2222-222222222222"
+  # 2: the authoritative create response contains both exact UUIDs.
+  printf '%s' '{"workspace_id":"bbbbbbbb-1111-1111-1111-111111111111","surface_id":"cccccccc-2222-2222-2222-222222222222"}' > "$dir/responses/2.out"
   fb=$(make_cmux_fakebin "$dir")
   out=$( PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_create_task fm-newtask /tmp/proj' "$ROOT" )
   [ "$out" = "bbbbbbbb-1111-1111-1111-111111111111 cccccccc-2222-2222-2222-222222222222" ] \
     || fail "create_task should echo '<workspace_id> <surface_id>', got '$out'"
-  assert_contains "$(cat "$dir/log")" $'\x1f''new-workspace'$'\x1f''--name'$'\x1f'"$title"$'\x1f''--cwd'$'\x1f''/tmp/proj' \
-    "create_task did not call new-workspace with the right name/cwd"
-  assert_contains "$(cat "$dir/log")" $'\x1f''--focus'$'\x1f''false' \
-    "create_task did not pass --focus false"
-  pass "fm_backend_cmux_create_task: creates a workspace and parses workspace_id/surface_id from list responses"
+  assert_contains "$(cat "$dir/log")" $'\x1f''workspace'$'\x1f''create'$'\x1f''--name'$'\x1f'"$title"$'\x1f''--cwd'$'\x1f''/tmp/proj' \
+    "create_task did not call canonical workspace create with the right name/cwd"
+  assert_contains "$(cat "$dir/log")" $'\x1f''--focus'$'\x1f''false'$'\x1f''--json'$'\x1f''--id-format'$'\x1f''uuids' \
+    "create_task did not request an unfocused JSON response with UUID identities"
+  [ "$(grep -c $'\x1f''workspace'$'\x1f''list' "$dir/log")" -eq 1 ] \
+    || fail "create_task should not re-resolve the created workspace through a post-create title listing"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''list-panes' \
+    "create_task should not discard the surface UUID returned by workspace create"
+  pass "fm_backend_cmux_create_task: trusts the authoritative create response without a racy post-create title lookup"
+}
+
+test_create_task_refuses_incomplete_create_identity() {
+  local dir fb out status
+  dir="$TMP_ROOT/create-task-incomplete"; mkdir -p "$dir/responses"
+  printf '{"workspaces":[]}' > "$dir/responses/1.out"
+  printf '{"workspace_id":"bbbbbbbb-1111-1111-1111-111111111111","surface_id":"surface:1"}' > "$dir/responses/2.out"
+  fb=$(make_cmux_fakebin "$dir")
+  out=$( PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_create_task fm-newtask /tmp/proj' "$ROOT" 2>&1 )
+  status=$?
+  [ "$status" -ne 0 ] || fail "create_task should refuse a create response without two valid endpoint UUIDs"
+  assert_contains "$out" "no complete workspace/surface identity" \
+    "create_task did not explain the incomplete create response"
+  assert_contains "$out" "refusing to infer one" \
+    "create_task should report that it will not infer identity from a later title listing"
+  [ "$(grep -c $'\x1f''workspace'$'\x1f''list' "$dir/log")" -eq 1 ] \
+    || fail "create_task should not attempt a masking post-create title lookup after an incomplete response"
+  pass "fm_backend_cmux_create_task: refuses an incomplete create identity instead of pretending the workspace is ready"
 }
 
 # --- target_ready / capture ---------------------------------------------------
@@ -525,6 +545,22 @@ test_target_ready_checks_expected_label() {
   cmux_assert_call_order "$dir/log" $'\x1f''workspace'$'\x1f''list' $'\x1f''list-panes' \
     "target_ready did not check the label before list-panes"
   pass "fm_backend_cmux_target_ready: verifies the workspace title against the expected label first"
+}
+
+test_target_ready_accepts_exact_surface_when_title_listing_is_masked() {
+  local dir fb
+  dir="$TMP_ROOT/ready-label-masked"; mkdir -p "$dir/responses"
+  # The current-window workspace projection does not show the newly created UUID.
+  printf '{"workspaces":[]}' > "$dir/responses/1.out"
+  # The authoritative UUID pair is already structurally live.
+  cmux_panes_response "$dir" 2 "bbbbbbbb-1111-1111-1111-111111111111"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_target_ready "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" fm-label' "$ROOT"
+  expect_code 0 $? "target_ready should accept an exact live UUID pair when the current-window title projection is empty"
+  [ "$(grep -c $'\x1f''workspace'$'\x1f''list' "$dir/log")" -eq 1 ] \
+    || fail "target_ready should not retry a masked title lookup after exact structural readiness succeeds"
+  pass "fm_backend_cmux_target_ready: accepts exact structural readiness when the current-window title listing is masked"
 }
 
 test_target_ready_rejects_label_mismatch() {
@@ -610,8 +646,7 @@ test_send_key_recovers_stale_target_by_label() {
   dir="$TMP_ROOT/sendkey-stale-target"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
-  cmux_workspace_list_response "$dir" 2 "cccccccc-2222-2222-2222-222222222222" "$title"
-  cmux_panes_response "$dir" 3 "dddddddd-3333-3333-3333-333333333333"
+  cmux_panes_response "$dir" 2 "dddddddd-3333-3333-3333-333333333333"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_key "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" Enter fm-label' "$ROOT"
@@ -1042,14 +1077,14 @@ test_kill_recovers_stale_target_by_label() {
   local dir fb title
   dir="$TMP_ROOT/kill-stale-target"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
-  # target_ready label recovery: 1 workspace list (title lookup, misses stale id),
-  # 2 workspace list (id-for-label -> refreshed id), 3 list-panes (surface id).
+  # target_ready label recovery: 1 workspace list finds the expected title
+  # under a refreshed id, then 2 list-panes resolves its surface.
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
-  cmux_workspace_list_response "$dir" 2 "cccccccc-2222-2222-2222-222222222222" "$title"
-  cmux_panes_response "$dir" 3 "dddddddd-3333-3333-3333-333333333333"
-  # window_of_workspace on the REFRESHED id: 4 list-windows (not last), 5 workspace list --window.
-  cmux_windows_response "$dir" 4 "eeeeeeee-0000-0000-0000-000000000000" 2
-  cmux_workspace_list_response "$dir" 5 "cccccccc-2222-2222-2222-222222222222" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
+  cmux_panes_response "$dir" 2 "dddddddd-3333-3333-3333-333333333333"
+  # window_of_workspace on the refreshed id: 3 list-windows (not last), then
+  # 4 workspace list --window.
+  cmux_windows_response "$dir" 3 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 4 "cccccccc-2222-2222-2222-222222222222" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "" fm-label' "$ROOT"
@@ -1130,8 +1165,10 @@ test_ensure_running_fails_fast_on_denied_without_launching
 test_ensure_running_fails_fast_on_unauth_without_launching
 test_create_task_refuses_duplicate_label
 test_create_task_creates_and_parses_ids
+test_create_task_refuses_incomplete_create_identity
 test_target_ready_fails_when_target_absent
 test_target_ready_checks_expected_label
+test_target_ready_accepts_exact_surface_when_title_listing_is_masked
 test_target_ready_rejects_label_mismatch
 test_capture_trims_locally
 test_capture_fails_when_read_screen_fails_empty

@@ -341,31 +341,36 @@ fm_backend_cmux_surface_id_for_workspace() {  # <workspace_id>
     | jq -r '.panes[0] // {} | .selected_surface_id // (.surface_ids[0] // empty)' 2>/dev/null
 }
 
-# fm_backend_cmux_create_task: create the task's workspace (one surface),
-# refusing an existing live <label> (finding #6: cmux enforces no uniqueness
-# itself). Resolves the fresh workspace's default surface via one list-panes
-# call (finding: a freshly created workspace already has exactly one surface,
-# so no separate new-surface call is needed). --focus false is passed for
-# defense in depth though verified to already be the default (finding:
-# workspace/surface/pane create all default focus to false) - no
-# focus-restore dance is needed, unlike zellij. Echoes "<workspace_id>
-# <surface_id>" on success.
+# fm_backend_cmux_create_task: create the task's workspace and take its exact
+# workspace and surface UUIDs from the authoritative create response.
+# The older create-then-title-lookup sequence raced cmux's workspace-list
+# projection and was also scoped to the caller's current window, so a real
+# creation could be mistaken for failure while leaving only an idle shell.
+# The canonical `workspace create` command has returned both UUIDs as JSON
+# since the verified 0.64.17 floor.
+# cmux enforces no title uniqueness itself, so the pre-create duplicate check
+# remains deliberate.
+# --focus false is defense in depth though verified to be the default.
+# Echoes "<workspace_id> <surface_id>" on success.
 fm_backend_cmux_create_task() {  # <label> <cwd>
-  local label=$1 cwd=$2 title dup out wsid sfid
+  local label=$1 cwd=$2 title dup out wsid sfid uuid_re
+  uuid_re='^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'
   title=$(fm_backend_cmux_scoped_title "$label")
   dup=$(fm_backend_cmux_workspace_id_for_label "$title")
   if [ -n "$dup" ]; then
     echo "error: cmux workspace '$title' already exists" >&2
     return 1
   fi
-  out=$(fm_backend_cmux_cli new-workspace --name "$title" --cwd "$cwd" --focus false --id-format uuids 2>&1) || {
-    echo "error: cmux new-workspace failed for '$title': $out" >&2
+  out=$(fm_backend_cmux_cli workspace create --name "$title" --cwd "$cwd" --focus false --json --id-format uuids 2>&1) || {
+    echo "error: cmux workspace create failed for '$title': $out" >&2
     return 1
   }
-  wsid=$(fm_backend_cmux_workspace_id_for_label "$title")
-  [ -n "$wsid" ] || { echo "error: could not resolve a cmux workspace id for '$title' after creation" >&2; return 1; }
-  sfid=$(fm_backend_cmux_surface_id_for_workspace "$wsid")
-  [ -n "$sfid" ] || { echo "error: could not resolve the default surface for cmux workspace '$title' ($wsid)" >&2; return 1; }
+  wsid=$(printf '%s' "$out" | jq -r --arg re "$uuid_re" '(.workspace_id // empty) | select(type == "string" and test($re))' 2>/dev/null)
+  sfid=$(printf '%s' "$out" | jq -r --arg re "$uuid_re" '(.surface_id // empty) | select(type == "string" and test($re))' 2>/dev/null)
+  if [ -z "$wsid" ] || [ -z "$sfid" ]; then
+    echo "error: cmux workspace create returned no complete workspace/surface identity for '$title'; refusing to infer one from an eventually consistent title listing" >&2
+    return 1
+  fi
   printf '%s %s' "$wsid" "$sfid"
 }
 
@@ -405,22 +410,30 @@ fm_backend_cmux_surface_exists() {  # <workspace_id> <surface_id>
 
 # fm_backend_cmux_target_ready: parse the target and verify it is live via
 # fm_backend_cmux_surface_exists (never read-screen - see that function's
-# header for the fresh-surface pitfall this avoids). When the caller knows
-# the owning firstmate task label, refresh stale workspace/surface ids by label.
+# header for the fresh-surface pitfall this avoids).
+# When the caller knows the owning firstmate task label, a visible conflicting
+# title is refused and a stale target is refreshed by label.
+# An absent title is not contradictory evidence because workspace listing is
+# current-window scoped and can lag a successful create response, so the exact
+# UUID pair remains authoritative when its surface exists structurally.
 fm_backend_cmux_target_ready() {  # <target> [expected-label]
-  local expected_label=${2:-} expected_title title wsid sfid
+  local expected_label=${2:-} expected_title listing listed_wsid title wsid sfid
   fm_backend_cmux_parse_target "$1" || return 1
   if [ -n "$expected_label" ]; then
     expected_title=$(fm_backend_cmux_scoped_title "$expected_label")
-    title=$(fm_backend_cmux_cli workspace list --json --id-format uuids 2>/dev/null | jq -r --arg id "$FM_BACKEND_CMUX_WORKSPACE" '.workspaces[]? | select(.id == $id) | .title' 2>/dev/null)
-    if [ "$title" = "$expected_title" ]; then
+    listing=$(fm_backend_cmux_cli workspace list --json --id-format uuids 2>/dev/null) || listing=
+    title=$(printf '%s' "$listing" | jq -r --arg id "$FM_BACKEND_CMUX_WORKSPACE" '.workspaces[]? | select(.id == $id) | .title' 2>/dev/null)
+    listed_wsid=$(printf '%s' "$listing" | jq -r --arg want "$expected_title" '.workspaces[]? | select(.title == $want) | .id' 2>/dev/null | head -1)
+    if [ -n "$title" ]; then
+      [ "$title" = "$expected_title" ] || return 1
       fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE" && return 0
       wsid=$FM_BACKEND_CMUX_WORKSPACE
-    elif [ -n "$title" ]; then
-      return 1
+    elif [ -n "$listed_wsid" ]; then
+      wsid=$listed_wsid
+    elif fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE"; then
+      return 0
     else
-      wsid=$(fm_backend_cmux_workspace_id_for_label "$expected_title")
-      [ -n "$wsid" ] || return 1
+      return 1
     fi
     sfid=$(fm_backend_cmux_surface_id_for_workspace "$wsid")
     [ -n "$sfid" ] || return 1

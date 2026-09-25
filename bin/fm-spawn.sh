@@ -3709,6 +3709,36 @@ spawn_send_key() { # <target> <key>
   esac
 }
 
+# A cmux workspace and surface prove only that an endpoint exists.
+# Pi's extension-reported agent-start event proves the launched process consumed
+# the launch brief and began processing its instructions.
+# Accept idle as well as busy because a short first turn can settle between
+# polls while retaining pi-ext as the semantic source.
+cmux_pi_wait_for_processing() {
+  local record busy_state busy_source
+  local i=0 max=${FM_CMUX_PI_READY_POLLS:-60} interval=${FM_CMUX_PI_POLL_INTERVAL:-0.5}
+  while [ "$i" -lt "$max" ]; do
+    record=$(fm_busy_record_read "$STATE_REAL" "$ID" 2>/dev/null) || record=
+    if [ -n "$record" ]; then
+      IFS=' ' read -r busy_state busy_source _ <<< "$record"
+      if [ "$busy_source" = pi-ext ]; then
+        case "$busy_state" in busy|idle) return 0 ;; esac
+      fi
+    fi
+    i=$((i + 1))
+    [ "$i" -ge "$max" ] || sleep "$interval"
+  done
+  return 1
+}
+
+cmux_pi_spawn_fail() {  # <detail>
+  local detail=$1
+  fm_backend_cmux_kill "$T" "" "$W" 2>/dev/null || true
+  detail="$detail; cleanup was attempted for the exact cmux endpoint and the isolated project copy is preserved at $WT"
+  printf '%s\n' "$(status_stamp_line "failed: $detail")" >>"$STATE/$ID.status"
+  echo "error: $detail; inspect cmux window $T if it remains" >&2
+}
+
 kimi_capture() {
   fm_backend_capture "$BACKEND" "$T" 120 "$W" 2>/dev/null || true
 }
@@ -5084,13 +5114,27 @@ if ! (umask 077 && printf '%s\n' "$LAUNCH" >"$LAUNCH_STAGE" &&
 fi
 sleep 0.3
 SPAWN_LAUNCH_SENT=1
-spawn_send_literal "$T" ". $(shell_quote "$LAUNCH_FILE")"
+SPAWN_LAUNCH_LITERAL_STATUS=0
+spawn_send_literal "$T" ". $(shell_quote "$LAUNCH_FILE")" || SPAWN_LAUNCH_LITERAL_STATUS=$?
 sleep 0.3
 if [ "${HERDR_PROJECTED:-0}" -eq 1 ]; then
   HERDR_PROJECTION_ABORT_CLEANUP=0
   spawn_herdr_presentation_order_lock_release
 fi
-spawn_send_key "$T" Enter
+SPAWN_LAUNCH_ENTER_STATUS=0
+spawn_send_key "$T" Enter || SPAWN_LAUNCH_ENTER_STATUS=$?
+case "$BACKEND:$HARNESS" in
+  cmux:pi|cmux:pi-signed)
+    if [ "$SPAWN_LAUNCH_LITERAL_STATUS" -ne 0 ] || [ "$SPAWN_LAUNCH_ENTER_STATUS" -ne 0 ]; then
+      cmux_pi_spawn_fail "cmux could not submit Pi's staged launch command, so the workspace may contain only an idle shell and no live worker record will be published"
+      exit 1
+    fi
+    if ! cmux_pi_wait_for_processing; then
+      cmux_pi_spawn_fail "cmux created the endpoint but Pi did not report processing its launch brief, so the workspace may contain only an idle shell and no live worker record will be published"
+      exit 1
+    fi
+    ;;
+esac
 if [ "$HARNESS" = kimi ]; then
   if ! kimi_wait_for_ready; then
     kimi_spawn_fail "$KIMI_READY_FAILURE_DETAIL"

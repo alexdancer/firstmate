@@ -1770,7 +1770,7 @@ Current active CLI findings:
 
 | Guarantee | Command shape | Result |
 | --- | --- | --- |
-| Create | `new-workspace --name <title> --cwd <dir> --focus false --id-format uuids` | Created one workspace with one surface without focusing it. |
+| Create | `workspace create --name <title> --cwd <dir> --focus false --json --id-format uuids` | Returns the exact workspace and initial surface UUIDs without focusing the workspace. |
 | Fresh readiness | `list-panes --workspace <id> --json --id-format uuids` | Found a brand-new surface before content existed. |
 | Fresh read counterexample | `read-screen` before any write | Returned `internal_error: Failed to read terminal text`. |
 | Literal send | `send --workspace <id> --surface <id> -- <text>` | Left text unsubmitted. |
@@ -1778,6 +1778,27 @@ Current active CLI findings:
 | Nested cwd | `current_directory` plus foreground subshell | Structured cwd froze; the marker-delimited `pwd` probe found the live cwd. |
 | Last surface | `close-surface` on the only surface | Refused with `invalid_state: Cannot close the last surface`. |
 | Last workspace | `close-workspace` on the only workspace in a window | Printed success but left the workspace present. |
+
+Issue #5685 exposed a separate spawn failure in the old create path.
+The trigger was discarding cmux's successful create response and immediately rediscovering the workspace by title.
+The masking conditions were that workspace listing is scoped to the caller's current window and its projection can lag creation.
+The visible result was a named workspace containing an idle shell because spawn stopped before submitting Pi while no worker record was committed.
+
+Source inspection at the verified 0.64.17 floor confirmed that canonical `workspace create` honors `--json`, and the `workspace.create` response contains `workspace_id` and `surface_id`.
+The deprecated `new-workspace` path deliberately ignored JSON output at that version, so parsing its text was not an equivalent fix.
+The cmux upstream create test also consumes the returned workspace handle immediately, which disconfirms the theory that a post-create title retry is required for identity.
+Firstmate now takes both UUIDs from the authoritative response and uses structural `list-panes` only for later liveness.
+A current-window title listing that omits the exact UUID pair is treated as absent evidence, while a visible conflicting title is still refused.
+
+The public-path regression drives `fm-spawn.sh` with a masked title projection in both directions.
+The success arm applies the real generation-bound `pi-ext` `agent-start` event and confirms the worker record is committed only afterward.
+The failure arm leaves the cmux surface as an idle shell until the readiness deadline and confirms spawn attempts exact endpoint cleanup, removes the provisional worker record, preserves the isolated project copy, and never invokes tmux.
+The opt-in real guard is `FM_CMUX_PI_LAUNCH_LIVE=1 tests/fm-cmux-pi-launch-live-e2e.test.sh`.
+
+A real refresh attempt on 2026-09-25 used cmux 0.64.25 build 106 and Pi 0.87.1.
+The worker process was outside cmux ancestry under the app's default `cmuxOnly` control mode, so `cmux ping` returned `Access denied - only processes started inside cmux can connect` before any workspace could safely be created.
+Changing the shared app setting was outside the test's authority.
+The opt-in guard therefore remains the required live proof from an Automation-mode or otherwise authorized cmux process, rather than substituting a mocked launch for that claim.
 
 The last-workspace workaround was reverified on 2026-07-10 in Automation mode.
 After creating one unfocused unnamed sibling in the same window, `close-workspace` removed the exact task workspace and left only cmux's default sibling.
@@ -1789,7 +1810,9 @@ The bundled Claude wrapper was observed stripping `CMUX_*` variables on its fail
 
 ```sh
 tests/fm-backend-cmux.test.sh
+tests/fm-cmux-pi-launch.test.sh
 tests/fm-backend-cmux-smoke.test.sh
+FM_CMUX_PI_LAUNCH_LIVE=1 tests/fm-cmux-pi-launch-live-e2e.test.sh
 ```
 
 The real smoke proves socket access, fresh readiness, current-path probing, send and keys, bounded capture, title identity, and guarded exact cleanup.

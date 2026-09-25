@@ -46,7 +46,8 @@ The adapter may launch the app with `open -a cmux` only when the socket is down;
 Routine supervision uses `bin/fm-peek.sh <id>` and `FM_HOME=<home> bin/fm-send.sh <id> '<text>'` without bringing the cmux window forward.
 Task workspace and surface creation use `focus=false`.
 
-Verify setup by spawning a small task and confirming metadata contains `backend=cmux`, `cmux_workspace_id=`, and `cmux_surface_id=`.
+Verify setup by spawning a small task and confirming the worker begins processing its instructions before spawn reports success and leaves committed metadata with `backend=cmux`, `cmux_workspace_id=`, and `cmux_surface_id=`.
+For Pi on cmux, workspace creation alone is not success: spawn waits for Pi's lifecycle extension to report `agent-start` and removes the provisional worker record if that proof never arrives.
 
 ## Runtime detection
 
@@ -68,7 +69,9 @@ The spawn refusal explains how to finish cmux setup or opt back into tmux.
 Each task owns one cmux workspace with one surface.
 The caller-facing label remains `fm-<id>`, while the visible workspace title is `fm-<home-label>-<id>`.
 The home label is `firstmate` or `2ndmate-<id>` plus a stable short hash of the resolved Firstmate root.
-cmux does not enforce title uniqueness, so create, recovery, list, and cleanup paths all validate this scoped title.
+cmux does not enforce title uniqueness, so the pre-create duplicate check, recovery, list, and cleanup paths validate this scoped title.
+Creation takes the exact workspace and surface UUIDs from the canonical `workspace create --json --id-format uuids` response rather than trying to rediscover them through the current-window title projection.
+A visible conflicting title is refused during later target checks, while an absent title is not treated as contradictory when the exact UUID pair remains structurally live.
 Relocating the Firstmate installation changes the hash and leaves old titles unmatched, consistent with recorded worktree paths also becoming stale.
 
 ```text
@@ -85,7 +88,12 @@ Workspace UUIDs are not stable across an app relaunch, so recovery searches by t
 
 A genuinely fresh surface returns an internal error from `read-screen` until something has been written.
 Target readiness therefore uses the structural `list-panes` response instead of a content read.
+The exact create response is endpoint authority because a successful workspace can be absent from the immediate current-window title listing.
 Capture remains bounded and locally trimmed after `read-screen` becomes available.
+
+For Pi, structural readiness is necessary but not sufficient.
+The cmux spawn path waits a bounded interval for the task's generation-bound Pi extension to report `agent_start`, accepting either the resulting busy state or a later settled idle state from the same `pi-ext` source.
+If the staged command is not submitted or that event never arrives, spawn reports the possible idle-shell symptom, attempts exact endpoint cleanup, preserves the isolated project copy, removes the provisional worker and busy records, and does not switch to tmux.
 
 `current_directory` follows a top-level shell `cd` but not the foreground subshell opened by `treehouse get`.
 Spawn-time worktree discovery sends begin and end markers around `pwd`, captures the marked block, and joins wrapped path lines.
@@ -127,7 +135,9 @@ Real tests share the captain's running app rather than creating an isolated cmux
 
 ```sh
 tests/fm-backend-cmux.test.sh
+tests/fm-cmux-pi-launch.test.sh
 tests/fm-backend-cmux-smoke.test.sh
+FM_CMUX_PI_LAUNCH_LIVE=1 tests/fm-cmux-pi-launch-live-e2e.test.sh
 ```
 
 [`verification/runtime-backends.md`](verification/runtime-backends.md#cmux) records the active source and live evidence, including socket modes and last-in-window cleanup.
