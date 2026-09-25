@@ -73,10 +73,7 @@
 #      `self.id = UUID()`, with no restored-id parameter, unlike surfaces'
 #      `restoredSurfaceId ?? UUID()` path scoped to same-run object reuse).
 #      No live app restart of the captain's own content was performed to
-#      confirm this; see docs/cmux-backend.md for the reasoning. Recovery
-#      therefore uses scoped-title matching from the caller-facing fm-<id>
-#      label, never a stored uuid, mirroring herdr's/zellij's own recovery
-#      posture.
+#      confirm this; see docs/cmux-backend.md for the reasoning.
 #   6. NO title uniqueness enforcement for workspaces OR surfaces/tabs -
 #      verified live (two workspaces, and two surfaces in one workspace, all
 #      created successfully sharing one title). The duplicate check below is
@@ -412,36 +409,25 @@ fm_backend_cmux_surface_exists() {  # <workspace_id> <surface_id>
 # fm_backend_cmux_surface_exists (never read-screen - see that function's
 # header for the fresh-surface pitfall this avoids).
 # When the caller knows the owning firstmate task label, a visible conflicting
-# title is refused and a stale target is refreshed by label.
+# title is refused.
 # An absent title is not contradictory evidence because workspace listing is
 # current-window scoped and can lag a successful create response, so the exact
 # UUID pair remains authoritative when its surface exists structurally.
 fm_backend_cmux_target_ready() {  # <target> [expected-label]
-  local expected_label=${2:-} expected_title listing listed_wsid title wsid sfid wininfo
+  local expected_label=${2:-} expected_title listing title sfid
   fm_backend_cmux_parse_target "$1" || return 1
   if [ -n "$expected_label" ]; then
     expected_title=$(fm_backend_cmux_scoped_title "$expected_label")
     listing=$(fm_backend_cmux_cli workspace list --json --id-format uuids 2>/dev/null) || listing=
     title=$(printf '%s' "$listing" | jq -r --arg id "$FM_BACKEND_CMUX_WORKSPACE" '.workspaces[]? | select(.id == $id) | .title' 2>/dev/null)
-    listed_wsid=$(printf '%s' "$listing" | jq -r --arg want "$expected_title" '.workspaces[]? | select(.title == $want) | .id' 2>/dev/null | head -1)
     if [ -n "$title" ]; then
       [ "$title" = "$expected_title" ] || return 1
       fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE" && return 0
-      wsid=$FM_BACKEND_CMUX_WORKSPACE
-    else
-      if fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE"; then
-        return 0
-      fi
-      [ -n "$listed_wsid" ] || return 1
-      wininfo=$(fm_backend_cmux_window_of_workspace "$FM_BACKEND_CMUX_WORKSPACE") || return 1
-      [ -z "$wininfo" ] || return 1
-      wsid=$listed_wsid
+      sfid=$(fm_backend_cmux_surface_id_for_workspace "$FM_BACKEND_CMUX_WORKSPACE")
+      [ -n "$sfid" ] || return 1
+      FM_BACKEND_CMUX_SURFACE=$sfid
+      return 0
     fi
-    sfid=$(fm_backend_cmux_surface_id_for_workspace "$wsid")
-    [ -n "$sfid" ] || return 1
-    FM_BACKEND_CMUX_WORKSPACE=$wsid
-    FM_BACKEND_CMUX_SURFACE=$sfid
-    return 0
   fi
   fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE"
 }

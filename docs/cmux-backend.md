@@ -69,7 +69,7 @@ The spawn refusal explains how to finish cmux setup or opt back into tmux.
 Each task owns one cmux workspace with one surface.
 The caller-facing label remains `fm-<id>`, while the visible workspace title is `fm-<home-label>-<id>`.
 The home label is `firstmate` or `2ndmate-<id>` plus a stable short hash of the resolved Firstmate root.
-cmux does not enforce title uniqueness, so the pre-create duplicate check, recovery, list, and cleanup paths validate this scoped title.
+cmux does not enforce title uniqueness, so the pre-create duplicate check, list, and cleanup paths validate this scoped title.
 Creation takes the exact workspace and surface UUIDs from the canonical `workspace create --json --id-format uuids` response rather than trying to rediscover them through the current-window title projection.
 A visible conflicting title is refused during later target checks, while an absent title is not treated as contradictory when the exact UUID pair remains structurally live.
 Relocating the Firstmate installation changes the hash and leaves old titles unmatched, consistent with recorded worktree paths also becoming stale.
@@ -82,7 +82,7 @@ cmux_surface_id=<surface-uuid>
 ```
 
 The UUID pair is the active endpoint authority within one app run.
-Workspace UUIDs are not stable across an app relaunch, so recovery searches by the scoped title and then resolves the current surface id.
+Workspace UUIDs are not stable across an app relaunch. A stale recorded UUID refuses target operations; scoped-title discovery can still identify an orphan workspace for inspection.
 
 ## Current operation and safety
 
@@ -111,7 +111,7 @@ A task workspace's last surface cannot be closed directly.
 Cleanup owns the whole workspace and uses `close-workspace`.
 cmux also refuses to remove the only workspace in a macOS window while returning a misleading success response.
 When the task is last in its window, Firstmate creates one unfocused unnamed sibling workspace in that same window, closes the task workspace, and leaves the window with cmux's fresh default workspace.
-The sibling never carries an `fm-` title and is ignored by recovery.
+The sibling never carries an `fm-` title and is ignored by scoped-title discovery.
 
 The exact window membership is re-read before this operation.
 A selected workspace that is not last closes normally; selection itself is not the trigger.
@@ -128,8 +128,8 @@ Real tests share the captain's running app rather than creating an isolated cmux
 - There is no native busy or push-event signal.
 - A target can disappear after structural readiness and before the operation.
 - The only-workspace cleanup path leaves a fresh default workspace and cannot close the window.
-- Label lookup and recovery are currently scoped to the current cmux window, so a task moved to a non-current window is a known recovery blind spot.
-- Workspace ids do not survive app relaunch and are never recovery authority.
+- Label lookup and orphan discovery are currently scoped to the current cmux window.
+- Workspace ids do not survive app relaunch, so stale task targets are refused.
 
 ## Regression entry points
 

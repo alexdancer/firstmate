@@ -577,43 +577,59 @@ test_send_prefers_exact_surface_over_same_title_in_current_window() {
     "send was redirected to the older same-title workspace"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''list-panes'$'\x1f''--workspace'$'\x1f''cccccccc-2222-2222-2222-222222222222' \
     "send should not inspect the old title match while the exact pair is live"
-  pass "cmux sends to the exact live pair before considering same-title recovery"
+  pass "cmux sends to the exact live pair despite a same-title workspace"
 }
 
-test_send_refuses_recovery_while_exact_workspace_exists() {
+test_send_refuses_same_title_when_exact_surface_is_missing() {
   local dir fb title status
-  dir="$TMP_ROOT/ready-exact-workspace-live"; mkdir -p "$dir/responses"
+  dir="$TMP_ROOT/ready-exact-surface-missing"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
   cmux_panes_empty_response "$dir" 2
-  cmux_windows_response "$dir" 3 "e1111111-0000-0000-0000-000000000000" 1 "e2222222-0000-0000-0000-000000000000" 1
-  cmux_workspace_list_response "$dir" 4 "cccccccc-2222-2222-2222-222222222222" "$title"
-  cmux_workspace_list_response "$dir" 5 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_literal "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "probe" fm-label' "$ROOT"
   status=$?
-  [ "$status" -ne 0 ] || fail "send should refuse title recovery while the exact workspace still exists"
+  [ "$status" -ne 0 ] || fail "send should refuse a same-title workspace when the exact surface is missing"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''send'$'\x1f' \
     "send targeted a same-title workspace after the exact surface probe failed"
-  pass "cmux refuses title recovery while the exact workspace is live"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''list-windows' \
+    "send attempted a listing-based absence proof"
+  pass "cmux refuses a same-title workspace when the exact surface is missing"
 }
 
-test_send_refuses_recovery_when_exact_status_is_inconclusive() {
+test_send_refuses_same_title_when_exact_probe_fails() {
   local dir fb title status
   dir="$TMP_ROOT/ready-exact-status-unknown"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
   printf '1\n' > "$dir/responses/2.exit"
-  printf '1\n' > "$dir/responses/3.exit"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_literal "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "probe" fm-label' "$ROOT"
   status=$?
-  [ "$status" -ne 0 ] || fail "send should refuse title recovery when exact workspace status is inconclusive"
+  [ "$status" -ne 0 ] || fail "send should refuse a same-title workspace when the exact probe fails"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''send'$'\x1f' \
     "send targeted a same-title workspace without proof that the exact workspace is gone"
-  pass "cmux refuses title recovery on an incomplete cross-window probe"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''list-windows' \
+    "send attempted a listing-based absence proof"
+  pass "cmux refuses a same-title workspace when the exact probe fails"
+}
+
+test_send_refreshes_surface_in_the_exact_visible_workspace() {
+  local dir fb title
+  dir="$TMP_ROOT/ready-exact-workspace-surface-refresh"; mkdir -p "$dir/responses"
+  title=$(cmux_expected_scoped_title fm-label)
+  cmux_workspace_list_response "$dir" 1 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
+  cmux_panes_empty_response "$dir" 2
+  cmux_panes_response "$dir" 3 "dddddddd-3333-3333-3333-333333333333"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_literal "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "probe" fm-label' "$ROOT"
+  expect_code 0 $? "send should refresh the surface inside the exact visible workspace"
+  assert_contains "$(cat "$dir/log")" $'\x1f''send'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000'$'\x1f''--surface'$'\x1f''dddddddd-3333-3333-3333-333333333333' \
+    "send did not use the refreshed surface in the exact workspace"
+  pass "cmux refreshes a surface only within the exact visible workspace"
 }
 
 test_target_ready_rejects_label_mismatch() {
@@ -694,24 +710,20 @@ test_send_key_normalizes_and_targets() {
   pass "fm_backend_cmux_send_key: normalizes the key (Escape -> escape) and targets the explicit workspace/surface"
 }
 
-test_send_key_recovers_stale_target_by_label() {
-  local dir fb title
+test_send_key_refuses_stale_workspace_with_same_title() {
+  local dir fb title status
   dir="$TMP_ROOT/sendkey-stale-target"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
   cmux_panes_empty_response "$dir" 2
-  cmux_windows_response "$dir" 3 "eeeeeeee-0000-0000-0000-000000000000" 1
-  cmux_workspace_list_response "$dir" 4 "cccccccc-2222-2222-2222-222222222222" "$title"
-  cmux_panes_response "$dir" 5 "dddddddd-3333-3333-3333-333333333333"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_key "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" Enter fm-label' "$ROOT"
-  expect_code 0 $? "send_key should recover a stale cmux target when the expected label is live"
-  assert_contains "$(cat "$dir/log")" $'\x1f''send-key'$'\x1f''--workspace'$'\x1f''cccccccc-2222-2222-2222-222222222222'$'\x1f''--surface'$'\x1f''dddddddd-3333-3333-3333-333333333333'$'\x1f''enter' \
-    "send_key did not use the refreshed cmux workspace/surface ids"
-  assert_not_contains "$(cat "$dir/log")" $'\x1f''send-key'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000' \
-    "send_key should not target the stale cmux workspace id after label recovery"
-  pass "fm_backend_cmux_send_key: recovers stale workspace/surface ids by expected label"
+  status=$?
+  [ "$status" -ne 0 ] || fail "send_key should refuse a stale workspace despite a matching title"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''send-key' \
+    "send_key submitted to a same-title workspace"
+  pass "fm_backend_cmux_send_key: refuses a stale workspace despite a matching title"
 }
 
 test_send_literal_uses_separator_for_option_shaped_text() {
@@ -1142,30 +1154,21 @@ test_kill_is_best_effort_when_close_workspace_fails() {
   pass "fm_backend_cmux_kill: never fails even when close-workspace fails"
 }
 
-test_kill_recovers_stale_target_by_label() {
+test_kill_refuses_stale_target_with_same_title() {
   local dir fb title
   dir="$TMP_ROOT/kill-stale-target"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
-  # target_ready label recovery: 1 workspace list finds the expected title
-  # under a refreshed id, 2 finds the old surface absent, then 5 resolves the new surface.
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
   cmux_panes_empty_response "$dir" 2
-  cmux_windows_response "$dir" 3 "eeeeeeee-0000-0000-0000-000000000000" 2
-  cmux_workspace_list_response "$dir" 4 "cccccccc-2222-2222-2222-222222222222" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
-  cmux_panes_response "$dir" 5 "dddddddd-3333-3333-3333-333333333333"
-  cmux_windows_response "$dir" 6 "eeeeeeee-0000-0000-0000-000000000000" 2
-  cmux_workspace_list_response "$dir" 7 "cccccccc-2222-2222-2222-222222222222" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "" fm-label' "$ROOT"
-  expect_code 0 $? "kill should recover a stale cmux target when the expected label is live"
-  assert_contains "$(cat "$dir/log")" $'\x1f''close-workspace'$'\x1f''--workspace'$'\x1f''cccccccc-2222-2222-2222-222222222222' \
-    "kill did not use the refreshed cmux workspace/surface ids"
-  assert_not_contains "$(cat "$dir/log")" $'\x1f''close-workspace'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000' \
-    "kill should not target the stale cmux workspace id after label recovery"
+  expect_code 0 $? "kill should remain best-effort for a stale target"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''close-workspace' \
+    "kill closed a same-title workspace without exact identity"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-surface' \
     "kill should not call close-surface"
-  pass "fm_backend_cmux_kill: recovers stale workspace/surface ids by expected label"
+  pass "fm_backend_cmux_kill: leaves a same-title workspace untouched when the exact target is stale"
 }
 
 # --- list_live: label-based orphan discovery ---------------------------------
@@ -1240,14 +1243,15 @@ test_target_ready_fails_when_target_absent
 test_target_ready_checks_expected_label
 test_target_ready_accepts_exact_surface_when_title_listing_is_masked
 test_send_prefers_exact_surface_over_same_title_in_current_window
-test_send_refuses_recovery_while_exact_workspace_exists
-test_send_refuses_recovery_when_exact_status_is_inconclusive
+test_send_refuses_same_title_when_exact_surface_is_missing
+test_send_refuses_same_title_when_exact_probe_fails
+test_send_refreshes_surface_in_the_exact_visible_workspace
 test_target_ready_rejects_label_mismatch
 test_capture_trims_locally
 test_capture_fails_when_read_screen_fails_empty
 test_capture_fails_when_target_not_ready
 test_send_key_normalizes_and_targets
-test_send_key_recovers_stale_target_by_label
+test_send_key_refuses_stale_workspace_with_same_title
 test_send_literal_uses_separator_for_option_shaped_text
 test_send_text_line_clears_partial_input_when_enter_fails
 test_send_text_line_reports_unsafe_input_when_cleanup_fails
@@ -1272,6 +1276,6 @@ test_window_of_workspace_refuses_incomplete_scan
 test_kill_closes_workspace_directly_when_not_last
 test_kill_adds_sibling_when_last_in_window
 test_kill_is_best_effort_when_close_workspace_fails
-test_kill_recovers_stale_target_by_label
+test_kill_refuses_stale_target_with_same_title
 test_list_live_filters_by_title_prefix
 test_secondmate_spawn_refuses_cmux_backend

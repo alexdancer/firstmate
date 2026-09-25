@@ -1794,6 +1794,7 @@ The public-path regression drives `fm-spawn.sh` with a masked title projection i
 The success arm applies the real generation-bound `pi-ext` `agent-start` event and confirms the worker record is committed only afterward.
 The failure arm leaves the cmux surface as an idle shell until the readiness deadline and confirms spawn attempts exact endpoint cleanup, never publishes the worker record, preserves the isolated project copy, and never invokes tmux.
 The opt-in real guard is `FM_CMUX_PI_LAUNCH_LIVE=1 tests/fm-cmux-pi-launch-live-e2e.test.sh`.
+It attempts guarded workspace closure and preserves its lab path because cmux's workspace listing cannot prove that an exact workspace has closed.
 
 A real refresh attempt on 2026-09-25 used cmux 0.64.25 build 106 and Pi 0.87.1.
 The worker process was outside cmux ancestry under the app's default `cmuxOnly` control mode, so `cmux ping` returned `Access denied - only processes started inside cmux can connect` before any workspace could safely be created.
@@ -1805,7 +1806,7 @@ After creating one unfocused unnamed sibling in the same window, `close-workspac
 A selected non-last workspace closed directly, proving that window cardinality rather than selection is the trigger.
 
 Source inspection confirmed each workspace constructor creates a new UUID with no restored-id input.
-Recovery therefore remains title-based.
+Scoped-title discovery can identify an orphan workspace, but a stale recorded target refuses operations.
 The bundled Claude wrapper was observed stripping `CMUX_*` variables on its failed socket-probe path while retaining the app bundle id, supporting the macOS-only bundle-id and ancestry fallbacks.
 
 ```sh
