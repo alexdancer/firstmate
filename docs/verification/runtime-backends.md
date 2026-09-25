@@ -1152,6 +1152,36 @@ Observed 2026-08-19:
 ok - live Herdr submit confirm: Claude Code (2.1.236 (Claude Code)) on herdr 0.8.0 reports empty for a landed idle steer
 ```
 
+### Worker launch setup ordering
+
+Measured 2026-09-25 on macOS 26.6 arm64 with Herdr 0.9.1 and tmux 3.6a.
+Before the completion barrier, a public `bin/fm-spawn.sh --relaunch` returned success while the worker marker stayed absent and the real Herdr pane showed the final export joined to the staged source line:
+
+```text
+spawn_rc=0
+marker=absent
+export FM_TASK_ID=launch-race-15286. '/tmp/fm-launch-race-15286+.../launch.s1790312320.58973.11728.sh'
+export: not valid in this context: /tmp/fm-launch-race-15286+.../launch.s1790312320.58973.11728.sh
+```
+
+The terminal counterfactual submitted the same export followed immediately by literal text and Enter, which left its marker absent; waiting one second after `pane run` before the literal submission produced the marker with the exported value.
+The corresponding public tmux relaunch started its worker and recorded `FM_TASK_ID`, `GOTMPDIR`, and `COMPACT_ADVISER_DISABLE=1`, which isolates the fault to Firstmate assuming Herdr's accepted `pane run` had already executed.
+The corrected public path is the real-Herdr test below.
+It drives `fm-spawn.sh --relaunch`, requires all three environment values in the launched worker, and verifies that worker remains the pane's foreground process:
+
+```sh
+HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
+  bin/fm-test-run.sh tests/fm-herdr-launch-setup-e2e.test.sh
+```
+
+```text
+ok - real herdr: public relaunch completes setup before submitting the staged launch and starts the worker
+FM_TEST_END ... tests/fm-herdr-launch-setup-e2e.test.sh exit=0 duration_ms=2902 gate_skip=false
+```
+
+`tests/fm-control-relaunch.test.sh` models Herdr's asynchronous acceptance through the same public relaunch interface and fails if the staged source arrives before the delayed setup marker.
+`fm-spawn.sh` allows ten seconds for the marker, refuses before typing the staged source line when it remains absent, and uses this barrier only to prove setup ordering rather than later harness readiness.
+
 ### Prune and respawn
 
 The real label-collision reproduction is owned by:
