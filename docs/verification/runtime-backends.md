@@ -1155,19 +1155,7 @@ ok - live Herdr submit confirm: Claude Code (2.1.236 (Claude Code)) on herdr 0.8
 ### Worker launch setup ordering
 
 Measured 2026-09-25 on macOS 26.6 arm64 with Herdr 0.9.1 and tmux 3.6a.
-Before the completion barrier, a public `bin/fm-spawn.sh --relaunch` returned success while the worker marker stayed absent and the real Herdr pane showed the final export joined to the staged source line:
-
-```text
-spawn_rc=0
-marker=absent
-export FM_TASK_ID=launch-race-15286. '/tmp/fm-launch-race-15286+.../launch.s1790312320.58973.11728.sh'
-export: not valid in this context: /tmp/fm-launch-race-15286+.../launch.s1790312320.58973.11728.sh
-```
-
-The terminal counterfactual submitted the same export followed immediately by literal text and Enter, which left its marker absent; waiting one second after `pane run` before the literal submission produced the marker with the exported value.
-The corresponding public tmux relaunch started its worker and recorded `FM_TASK_ID`, `GOTMPDIR`, and `COMPACT_ADVISER_DISABLE=1`, which isolates the fault to Firstmate assuming Herdr's accepted `pane run` had already executed.
-The corrected public path is the real-Herdr test below.
-It drives `fm-spawn.sh --relaunch`, requires all three environment values in the launched worker, and verifies that worker remains the pane's foreground process:
+The real-Herdr regression below drives `fm-spawn.sh --relaunch`, requires `FM_TASK_ID`, `GOTMPDIR`, and `COMPACT_ADVISER_DISABLE=1` in the launched worker, and verifies that worker remains the pane's foreground process:
 
 ```sh
 HERDR_LAB_HELPER=bin/fm-herdr-lab.sh \
@@ -1180,12 +1168,11 @@ FM_TEST_END ... tests/fm-herdr-launch-setup-e2e.test.sh exit=0 duration_ms=2902 
 ```
 
 `tests/fm-control-relaunch.test.sh` models Herdr's asynchronous acceptance through the same public relaunch interface and fails if the staged source arrives before the delayed setup marker.
-`fm-spawn.sh` allows ten seconds for the marker, refuses before typing the staged source line when it remains absent, and uses this barrier only to prove setup ordering rather than later harness readiness.
+The operator-facing guarantee and its readiness boundary are owned by [Herdr transport behavior](../herdr-backend.md#current-transport-behavior).
 
-On 2026-09-25, a development-only evaluation also exercised the public relaunch with real Pi 0.87.1 (`openai-codex/gpt-6-sol`, low thinking) on Herdr 0.9.1 in the named isolated lab `fm-lab-pi-brief-proof-61627-18346`.
+On 2026-09-25, a development-only evaluation also exercised the public relaunch with real Pi 0.87.1 (`openai-codex/gpt-6-sol`, low thinking) on Herdr 0.9.1 in a named isolated lab.
 After accepting Pi's folder-trust prompt for the disposable candidate, the worker processed the generated launch brief, called its read tool on an untracked challenge file, and returned `LAUNCH_READY 33884 ae32d47623a4e47e`, the expected sum and nonce that were absent from the brief.
-Pi's persisted assistant and tool-result messages proved brief processing beyond process startup; the staged candidate diff and all candidate file bytes were unchanged, and guarded lab teardown passed the default-session tripwire.
-The focused `tests/fm-herdr-launch-setup-e2e.test.sh` regression also passed without a skip.
+Pi's persisted assistant and tool-result messages proved brief processing beyond process startup.
 This model evaluation is development evidence, not a live-LLM CI test.
 Claude brief processing remains untested: its earlier real launch stopped at the external-import consent dialog, and this Pi evaluation neither requested nor supplied that consent.
 

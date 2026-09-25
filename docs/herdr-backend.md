@@ -227,10 +227,10 @@ An already-running server is reused without restart or environment changes.
 Explicit named-session routing and unrelated launch environment remain intact.
 
 Literal text and Enter are separate operations on `fm-send.sh`'s typed plane; ordinary local text steers instead use the durable steering inbox and send only its best-effort constant doorbell through this adapter.
-Herdr's atomic run primitive packages command text and Enter in one API request, but its successful return acknowledges delivery rather than shell execution.
-Before a worker launch, `bin/fm-spawn.sh` batches the pane-shell exports into one compound run ending in a private completion marker, waits for that marker, retires it, and only then types the staged launch source line.
-A missing marker refuses the launch before that source line is sent, so deferred terminal delivery cannot join an export to the source path.
-The working backends retain their existing fixed-command sequence because this completion barrier is Herdr-specific.
+Herdr's atomic run primitive packages command text and Enter in one API request, but its successful return acknowledges acceptance rather than shell execution.
+Worker launch waits for confirmed pane-shell setup and refuses to submit the launch command when setup cannot be confirmed, preventing deferred terminal delivery from joining an export to the source path.
+This confirms the launch environment, not that the harness has processed its brief; the post-spawn confirmation remains necessary.
+`bin/fm-spawn.sh`'s header owns the Herdr-specific completion barrier mechanics.
 Enter, Escape, and Ctrl-C are supported.
 Typed-plane slash input, and dollar-prefixed skill input for Codex, uses the shared harness-aware settle before the first Enter so a completion popup cannot consume it.
 Typed-plane text is typed once; only Enter is retried.

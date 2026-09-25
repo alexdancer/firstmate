@@ -273,6 +273,8 @@
 #   Herdr's pre-launch pane exports are one compound run ending in a private
 #   completion marker; spawn waits for and retires that marker before it types
 #   the staged source line, because pane-run acceptance is not shell completion.
+#   It polls for up to ten seconds and refuses launch if submission fails, the
+#   marker already exists, completion is unconfirmed, or retirement fails.
 #   Spawn refuses an unsafe pre-existing task temp root or launch namespace, and
 #   task teardown removes only the current home's launch namespace.
 # Launch environment (config/launch-env-allowlist):
