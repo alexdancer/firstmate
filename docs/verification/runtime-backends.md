@@ -1792,7 +1792,7 @@ A current-window title listing that omits the exact UUID pair is treated as abse
 
 The public-path regression drives `fm-spawn.sh` with a masked title projection in both directions.
 The success arm applies the real generation-bound `pi-ext` `agent-start` event and confirms the worker record is committed only afterward.
-The failure arm leaves the cmux surface as an idle shell until the readiness deadline and confirms spawn attempts exact endpoint cleanup, removes the provisional worker record, preserves the isolated project copy, and never invokes tmux.
+The failure arm leaves the cmux surface as an idle shell until the readiness deadline and confirms spawn attempts exact endpoint cleanup, never publishes the worker record, preserves the isolated project copy, and never invokes tmux.
 The opt-in real guard is `FM_CMUX_PI_LAUNCH_LIVE=1 tests/fm-cmux-pi-launch-live-e2e.test.sh`.
 
 A real refresh attempt on 2026-09-25 used cmux 0.64.25 build 106 and Pi 0.87.1.

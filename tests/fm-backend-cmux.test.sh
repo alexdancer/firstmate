@@ -563,6 +563,23 @@ test_target_ready_accepts_exact_surface_when_title_listing_is_masked() {
   pass "fm_backend_cmux_target_ready: accepts exact structural readiness when the current-window title listing is masked"
 }
 
+test_send_prefers_exact_surface_over_same_title_in_current_window() {
+  local dir fb title
+  dir="$TMP_ROOT/ready-other-window"; mkdir -p "$dir/responses"
+  title=$(cmux_expected_scoped_title fm-label)
+  cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
+  cmux_panes_response "$dir" 2 "bbbbbbbb-1111-1111-1111-111111111111"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_literal "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "probe" fm-label' "$ROOT"
+  expect_code 0 $? "send should use the exact live surface despite an older same-title workspace"
+  assert_contains "$(cat "$dir/log")" $'\x1f''send'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000'$'\x1f''--surface'$'\x1f''bbbbbbbb-1111-1111-1111-111111111111' \
+    "send was redirected to the older same-title workspace"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''list-panes'$'\x1f''--workspace'$'\x1f''cccccccc-2222-2222-2222-222222222222' \
+    "send should not inspect the old title match while the exact pair is live"
+  pass "cmux sends to the exact live pair before considering same-title recovery"
+}
+
 test_target_ready_rejects_label_mismatch() {
   local dir fb status
   dir="$TMP_ROOT/ready-label-mismatch"; mkdir -p "$dir/responses"
@@ -646,7 +663,8 @@ test_send_key_recovers_stale_target_by_label() {
   dir="$TMP_ROOT/sendkey-stale-target"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
-  cmux_panes_response "$dir" 2 "dddddddd-3333-3333-3333-333333333333"
+  cmux_panes_empty_response "$dir" 2
+  cmux_panes_response "$dir" 3 "dddddddd-3333-3333-3333-333333333333"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_key "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" Enter fm-label' "$ROOT"
@@ -1078,13 +1096,14 @@ test_kill_recovers_stale_target_by_label() {
   dir="$TMP_ROOT/kill-stale-target"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
   # target_ready label recovery: 1 workspace list finds the expected title
-  # under a refreshed id, then 2 list-panes resolves its surface.
+  # under a refreshed id, 2 finds the old surface absent, then 3 resolves the new surface.
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
-  cmux_panes_response "$dir" 2 "dddddddd-3333-3333-3333-333333333333"
-  # window_of_workspace on the refreshed id: 3 list-windows (not last), then
-  # 4 workspace list --window.
-  cmux_windows_response "$dir" 3 "eeeeeeee-0000-0000-0000-000000000000" 2
-  cmux_workspace_list_response "$dir" 4 "cccccccc-2222-2222-2222-222222222222" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
+  cmux_panes_empty_response "$dir" 2
+  cmux_panes_response "$dir" 3 "dddddddd-3333-3333-3333-333333333333"
+  # window_of_workspace on the refreshed id: 4 list-windows (not last), then
+  # 5 workspace list --window.
+  cmux_windows_response "$dir" 4 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 5 "cccccccc-2222-2222-2222-222222222222" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "" fm-label' "$ROOT"
@@ -1169,6 +1188,7 @@ test_create_task_refuses_incomplete_create_identity
 test_target_ready_fails_when_target_absent
 test_target_ready_checks_expected_label
 test_target_ready_accepts_exact_surface_when_title_listing_is_masked
+test_send_prefers_exact_surface_over_same_title_in_current_window
 test_target_ready_rejects_label_mismatch
 test_capture_trims_locally
 test_capture_fails_when_read_screen_fails_empty

@@ -12,10 +12,13 @@ set -u
 TMP_ROOT=$(fm_test_tmproot fm-cmux-pi-launch)
 SUCCESS_ID="cmux-pi-ready-ok-$$"
 FAILURE_ID="cmux-pi-ready-fail-$$"
+SEND_FAILURE_ID="cmux-pi-send-fail-$$"
+ENTER_FAILURE_ID="cmux-pi-enter-fail-$$"
+TMUX_FAILURE_ID="tmux-pi-send-fail-$$"
 
 cleanup_launch_tmp() {
-  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID"
-  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
+  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID" "/tmp/fm-$SEND_FAILURE_ID" "/tmp/fm-$ENTER_FAILURE_ID" "/tmp/fm-$TMUX_FAILURE_ID"
+  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" -o -name "fm-$SEND_FAILURE_ID+*" -o -name "fm-$ENTER_FAILURE_ID+*" -o -name "fm-$TMUX_FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
   fm_test_cleanup
 }
 trap cleanup_launch_tmp EXIT INT TERM
@@ -71,13 +74,26 @@ case "${1:-}" in
   send)
     last=
     for arg in "$@"; do last=$arg; done
+    if [[ "$last" == *'/launch.'* ]] && [ "${FM_FAKE_CMUX_FAIL_LAUNCH_SEND:-0}" = 1 ]; then
+      exit 1
+    fi
     printf '%s' "$last" > "${FM_FAKE_CMUX_LAST_LITERAL:?}"
     ;;
   send-key)
     last=
     for arg in "$@"; do last=$arg; done
     if [ "$last" = enter ] && grep -q '/launch\..*\.sh' "${FM_FAKE_CMUX_LAST_LITERAL:?}" 2>/dev/null; then
+      if [ "${FM_FAKE_CMUX_FAIL_LAUNCH_ENTER:-0}" = 1 ]; then
+        exit 1
+      fi
       : > "${FM_FAKE_CMUX_LAUNCH_MARKER:?}"
+      [ ! -e "${FM_STATE_OVERRIDE:?}/${FM_FAKE_CMUX_ID:?}.meta" ] || : > "${FM_FAKE_CMUX_EARLY_META:?}"
+      record=$(bash -c '. "$0/bin/fm-busy-lib.sh"; fm_busy_record_read "$1" "$2"' \
+        "${FM_FAKE_ROOT:?}" "$FM_STATE_OVERRIDE" "$FM_FAKE_CMUX_ID")
+      case "$record" in
+        'unknown fm-spawn '*) : ;;
+        *) : > "${FM_FAKE_CMUX_EARLY_BUSY:?}" ;;
+      esac
       if [ "${FM_FAKE_CMUX_START_PI:-0}" = 1 ]; then
         gen=$(cat "${FM_STATE_OVERRIDE:?}/${FM_FAKE_CMUX_ID:?}.busy-gen")
         "${FM_FAKE_ROOT:?}/bin/fm-busy-event.sh" apply \
@@ -119,15 +135,18 @@ $1
 EOF_CASE
 }
 
-run_case_spawn() {  # <id> <emit-pi-event>
-  local id=$1 emit=$2
+run_case_spawn() {  # <id> <emit-pi-event> [fail-launch-send] [fail-launch-enter]
+  local id=$1 emit=$2 fail_send=${3:-0} fail_enter=${4:-0}
   FM_FAKE_CMUX_LOG="$CASE_DIR/cmux.log" \
     FM_FAKE_CMUX_LAST_LITERAL="$CASE_DIR/last-literal" \
     FM_FAKE_CMUX_LAUNCH_MARKER="$CASE_DIR/launch-attempted" \
+    FM_FAKE_CMUX_EARLY_META="$CASE_DIR/early-meta" \
+    FM_FAKE_CMUX_EARLY_BUSY="$CASE_DIR/early-busy" \
+    FM_FAKE_CMUX_FAIL_LAUNCH_SEND="$fail_send" \
+    FM_FAKE_CMUX_FAIL_LAUNCH_ENTER="$fail_enter" \
     FM_FAKE_CMUX_START_PI="$emit" FM_FAKE_CMUX_ID="$id" \
     FM_FAKE_CMUX_WT="$COPY_DIR" FM_FAKE_ROOT="$ROOT" \
     FM_FAKE_TMUX_FALLBACK_LOG="$CASE_DIR/tmux-fallback.log" \
-    FM_CMUX_PI_READY_POLLS=2 FM_CMUX_PI_POLL_INTERVAL=0 \
     fm_test_run_spawn "$HOME_DIR" "$COPY_DIR" "$FAKEBIN_DIR" \
       "$id" "$PROJECT_DIR" --scout --harness pi --backend cmux
 }
@@ -141,6 +160,8 @@ test_spawn_accepts_only_after_pi_agent_start() {
   expect_code 0 "$status" "spawn should accept the cmux endpoint after Pi reports agent_start"$'\n'"$out"
   assert_contains "$out" "spawned $SUCCESS_ID" "spawn did not report the confirmed Pi worker"
   assert_present "$HOME_DIR/state/$SUCCESS_ID.meta" "confirmed Pi spawn did not publish metadata"
+  assert_absent "$CASE_DIR/early-meta" "spawn published metadata before Pi reported processing"
+  assert_absent "$CASE_DIR/early-busy" "spawn reported a busy Pi before its lifecycle event"
   assert_present "$CASE_DIR/launch-attempted" "the staged Pi launch was not submitted"
   record=$(bash -c '. "$0/bin/fm-busy-lib.sh"; fm_busy_record_read "$1" "$2"' \
     "$ROOT" "$HOME_DIR/state" "$SUCCESS_ID")
@@ -169,6 +190,8 @@ test_spawn_refuses_idle_shell_without_worker_record() {
     "spawn pretended an unverified cmux endpoint was live"
   assert_absent "$HOME_DIR/state/$FAILURE_ID.meta" \
     "refused cmux Pi launch left a published worker record"
+  assert_absent "$CASE_DIR/early-meta" "unverified Pi launch was visible through metadata during the wait"
+  assert_absent "$CASE_DIR/early-busy" "unverified Pi launch was reported busy during the wait"
   assert_present "$CASE_DIR/launch-attempted" \
     "the failure arm did not reach staged Pi launch submission"
   assert_present "$COPY_DIR/README.md" \
@@ -182,7 +205,67 @@ test_spawn_refuses_idle_shell_without_worker_record() {
   pass "fm-spawn refuses an idle cmux shell, attempts exact cleanup, and preserves the unrecorded project copy"
 }
 
+test_spawn_refuses_cmux_launch_send_failure() {
+  local fixture out status
+  fixture=$(make_case send-failure "$SEND_FAILURE_ID")
+  read_case "$fixture"
+  out=$(run_case_spawn "$SEND_FAILURE_ID" 0 1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn accepted a failed cmux Pi launch send"
+  assert_contains "$out" "could not submit Pi's staged launch command" \
+    "spawn did not report the failed cmux Pi launch send"
+  assert_absent "$HOME_DIR/state/$SEND_FAILURE_ID.meta" \
+    "failed cmux Pi launch send published a worker record"
+  assert_present "$COPY_DIR/README.md" "failed cmux Pi launch send lost the isolated copy"
+  pass "fm-spawn refuses a failed cmux Pi launch send without publishing metadata"
+}
+
+test_spawn_refuses_cmux_launch_enter_failure() {
+  local fixture out status
+  fixture=$(make_case enter-failure "$ENTER_FAILURE_ID")
+  read_case "$fixture"
+  out=$(run_case_spawn "$ENTER_FAILURE_ID" 0 0 1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn accepted a failed cmux Pi Enter"
+  assert_contains "$out" "could not submit Pi's staged launch command" \
+    "spawn did not report the failed cmux Pi Enter"
+  assert_absent "$HOME_DIR/state/$ENTER_FAILURE_ID.meta" \
+    "failed cmux Pi Enter published a worker record"
+  assert_present "$COPY_DIR/README.md" "failed cmux Pi Enter lost the isolated copy"
+  pass "fm-spawn refuses a failed cmux Pi Enter without publishing metadata"
+}
+
+test_spawn_propagates_tmux_launch_send_failure() {
+  local fixture out status
+  fixture=$(make_case tmux-send-failure "$TMUX_FAILURE_ID")
+  read_case "$fixture"
+  fm_test_fake_tmux_spawn "$FAKEBIN_DIR"
+  mv "$FAKEBIN_DIR/tmux" "$FAKEBIN_DIR/tmux-base"
+  cat > "$FAKEBIN_DIR/tmux" <<'SH'
+#!/usr/bin/env bash
+for arg in "$@"; do
+  case "$arg" in
+    *'/launch.'*'.sh'*) exit 1 ;;
+  esac
+done
+exec "$(dirname "$0")/tmux-base" "$@"
+SH
+  chmod +x "$FAKEBIN_DIR/tmux"
+  out=$(fm_test_run_spawn "$HOME_DIR" "$COPY_DIR" "$FAKEBIN_DIR" \
+    "$TMUX_FAILURE_ID" "$PROJECT_DIR" --scout --harness pi --backend tmux)
+  status=$?
+  [ "$status" -ne 0 ] || fail "tmux spawn accepted a failed launch send"
+  assert_not_contains "$out" "spawned $TMUX_FAILURE_ID" \
+    "tmux spawn reported success after launch delivery failed"
+  assert_absent "$HOME_DIR/state/$TMUX_FAILURE_ID.meta" \
+    "failed tmux launch send left a published worker record"
+  pass "fm-spawn propagates a non-cmux launch send failure"
+}
+
 test_spawn_accepts_only_after_pi_agent_start
 test_spawn_refuses_idle_shell_without_worker_record
+test_spawn_refuses_cmux_launch_send_failure
+test_spawn_refuses_cmux_launch_enter_failure
+test_spawn_propagates_tmux_launch_send_failure
 
 echo "# all cmux Pi launch confirmation tests passed"

@@ -47,7 +47,7 @@ Routine supervision uses `bin/fm-peek.sh <id>` and `FM_HOME=<home> bin/fm-send.s
 Task workspace and surface creation use `focus=false`.
 
 Verify setup by spawning a small task and confirming the worker begins processing its instructions before spawn reports success and leaves committed metadata with `backend=cmux`, `cmux_workspace_id=`, and `cmux_surface_id=`.
-For Pi on cmux, workspace creation alone is not success: spawn waits for Pi's lifecycle extension to report `agent-start` and removes the provisional worker record if that proof never arrives.
+For Pi on cmux, workspace creation alone is not success: spawn waits for Pi's lifecycle extension to report `agent-start` before publishing the worker record.
 
 ## Runtime detection
 
@@ -93,7 +93,7 @@ Capture remains bounded and locally trimmed after `read-screen` becomes availabl
 
 For Pi, structural readiness is necessary but not sufficient.
 The cmux spawn path waits a bounded interval for the task's generation-bound Pi extension to report `agent_start`, accepting either the resulting busy state or a later settled idle state from the same `pi-ext` source.
-If the staged command is not submitted or that event never arrives, spawn reports the possible idle-shell symptom, attempts exact endpoint cleanup, preserves the isolated project copy, removes the provisional worker and busy records, and does not switch to tmux.
+If the staged command is not submitted or that event never arrives, spawn reports the possible idle-shell symptom, attempts exact endpoint cleanup, preserves the isolated project copy, retires the busy record without publishing worker metadata, and does not switch to tmux.
 
 `current_directory` follows a top-level shell `cd` but not the foreground subshell opened by `treehouse get`.
 Spawn-time worktree discovery sends begin and end markers around `pwd`, captures the marked block, and joins wrapped path lines.

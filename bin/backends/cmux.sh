@@ -428,12 +428,12 @@ fm_backend_cmux_target_ready() {  # <target> [expected-label]
       [ "$title" = "$expected_title" ] || return 1
       fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE" && return 0
       wsid=$FM_BACKEND_CMUX_WORKSPACE
-    elif [ -n "$listed_wsid" ]; then
-      wsid=$listed_wsid
-    elif fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE"; then
-      return 0
     else
-      return 1
+      if fm_backend_cmux_surface_exists "$FM_BACKEND_CMUX_WORKSPACE" "$FM_BACKEND_CMUX_SURFACE"; then
+        return 0
+      fi
+      [ -n "$listed_wsid" ] || return 1
+      wsid=$listed_wsid
     fi
     sfid=$(fm_backend_cmux_surface_id_for_workspace "$wsid")
     [ -n "$sfid" ] || return 1

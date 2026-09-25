@@ -14,24 +14,36 @@ LAB=
 SPAWNED=0
 
 cleanup() {
+  local cleanup_ok=1 wsid=
   if [ "$SPAWNED" -eq 1 ] && [ -n "$LAB" ]; then
-    FM_HOME="$LAB" "$ROOT/bin/fm-teardown.sh" "$TASK" >/dev/null 2>&1 || true
-  elif [ -n "$LAB" ] && fm_backend_cmux_cli ping >/dev/null 2>&1; then
+    if ! FM_HOME="$LAB" "$ROOT/bin/fm-teardown.sh" "$TASK" >/dev/null 2>&1; then
+      cleanup_ok=0
+    fi
+  elif [ -n "$LAB" ]; then
     FM_HOME="$LAB"
     export FM_HOME
-    wsid=
-    for _ in $(seq 1 10); do
-      wsid=$(fm_backend_cmux_workspace_id_for_label "$(fm_backend_cmux_scoped_title "$LABEL")")
-      [ -z "$wsid" ] || break
-      sleep 0.2
-    done
+    if fm_backend_cmux_cli ping >/dev/null 2>&1; then
+      for _ in $(seq 1 10); do
+        wsid=$(fm_backend_cmux_workspace_id_for_label "$(fm_backend_cmux_scoped_title "$LABEL")")
+        [ -z "$wsid" ] || break
+        sleep 0.2
+      done
+    else
+      cleanup_ok=0
+    fi
     if [ -n "$wsid" ]; then
       # shellcheck source=tests/cmux-test-safety.sh
       . "$ROOT/tests/cmux-test-safety.sh"
-      cmux_safe_close_workspace "$wsid" "$LABEL" >/dev/null 2>&1 || true
+      cmux_safe_close_workspace "$wsid" "$LABEL" >/dev/null 2>&1 || cleanup_ok=0
+    else
+      cleanup_ok=0
     fi
   fi
-  [ -z "$LAB" ] || rm -rf -- "$LAB"
+  if [ "$cleanup_ok" -eq 1 ]; then
+    [ -z "$LAB" ] || rm -rf -- "$LAB"
+  else
+    printf 'cleanup could not confirm closure; preserving cmux Pi lab at %s\n' "$LAB" >&2
+  fi
 }
 trap cleanup EXIT INT TERM
 

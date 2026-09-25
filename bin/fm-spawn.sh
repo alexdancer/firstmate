@@ -1169,6 +1169,7 @@ SPAWN_META_LOCK=
 SPAWN_META_LOCK_HELD=0
 SPAWN_META_PUBLISH_STARTED=0
 SPAWN_FRESH_COMMIT_PENDING=0
+SPAWN_DEFER_CMUX_PI_PUBLISH=0
 SPAWN_TASK_SET_LOCK=
 SPAWN_TASK_SET_LOCK_HELD=0
 SPAWN_TREEHOUSE_PROJECT_LOCK=
@@ -3716,8 +3717,8 @@ spawn_send_key() { # <target> <key>
 # polls while retaining pi-ext as the semantic source.
 cmux_pi_wait_for_processing() {
   local record busy_state busy_source
-  local i=0 max=${FM_CMUX_PI_READY_POLLS:-60} interval=${FM_CMUX_PI_POLL_INTERVAL:-0.5}
-  while [ "$i" -lt "$max" ]; do
+  local i=0
+  while [ "$i" -lt 60 ]; do
     record=$(fm_busy_record_read "$STATE_REAL" "$ID" 2>/dev/null) || record=
     if [ -n "$record" ]; then
       IFS=' ' read -r busy_state busy_source _ <<< "$record"
@@ -3726,7 +3727,7 @@ cmux_pi_wait_for_processing() {
       fi
     fi
     i=$((i + 1))
-    [ "$i" -ge "$max" ] || sleep "$interval"
+    [ "$i" -ge 60 ] || sleep 0.5
   done
   return 1
 }
@@ -4252,8 +4253,7 @@ if [ "$RELAUNCH" -eq 1 ]; then
 fi
 if [ "$KIND" != secondmate ]; then
   # Arm the semantic busy-state contract (bin/fm-busy-lib.sh) for every
-  # adapter with a verified semantic source. The launch brief sent below IS a
-  # submitted turn, so the seed record is busy/fm-spawn. The minted gen is
+  # adapter with a verified semantic source. The minted gen is
   # embedded into each adapter's wiring so an event from a superseded
   # incarnation is rejected as stale. Grok and rovo stay on their isolated
   # rendered-tail fallbacks and standalone Kimi stays unknown until
@@ -4271,7 +4271,11 @@ if [ "$KIND" != secondmate ]; then
   esac
   case "$HARNESS" in
   claude* | opencode* | pi | pi-signed | omp)
-    BUSY_GEN=$("$FM_ROOT/bin/fm-busy-event.sh" arm "$STATE_REAL" "$ID") || {
+    BUSY_SEED_STATE=busy
+    case "$BACKEND:$HARNESS" in
+      cmux:pi|cmux:pi-signed) BUSY_SEED_STATE=unknown ;;
+    esac
+    BUSY_GEN=$("$FM_ROOT/bin/fm-busy-event.sh" arm "$STATE_REAL" "$ID" --state "$BUSY_SEED_STATE") || {
       echo "error: failed to arm the busy-state contract for $ID" >&2
       exit 1
     }
@@ -4693,6 +4697,9 @@ if [ "$RELAUNCH" -eq 1 ]; then
 else
   SPAWN_META_TMP="$STATE/.$ID.meta.spawn.${BASHPID:-$$}"
   SPAWN_FRESH_COMMIT_PENDING=1
+  case "$BACKEND:$HARNESS" in
+    cmux:pi|cmux:pi-signed) SPAWN_DEFER_CMUX_PI_PUBLISH=1 ;;
+  esac
 fi
 SPAWN_META_PATH=$SPAWN_META_TMP
 preserve_relaunch_meta() {
@@ -4761,7 +4768,7 @@ preserve_relaunch_meta() {
   echo "error: task record for $ID could not be prepared at $SPAWN_META_PATH" >&2
   exit 1
 }
-if [ "$RELAUNCH" -eq 0 ]; then
+if [ "$RELAUNCH" -eq 0 ] && [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" != 1 ]; then
   if ! fm_backlog_atomic_transition publish "$SPAWN_META_TMP" "$STATE/$ID.meta" "task record" "$STATE"; then
     echo "error: task record for $ID could not be published ($FM_BACKLOG_TRANSITION_ERROR)" >&2
     exit 1
@@ -4833,18 +4840,20 @@ fi
 # still being delivered, cannot observe or complete a fresh provisional record
 # between its state check and `tasks-axi start`, and a delivery failure cannot
 # follow a committed In-flight transition.
-if [ "$SPAWN_TREEHOUSE_PROJECT_LOCK_HELD" = 1 ]; then
+if [ "$SPAWN_TREEHOUSE_PROJECT_LOCK_HELD" = 1 ] && [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" != 1 ]; then
   SPAWN_TREEHOUSE_PROJECT_LOCK_HELD=0
   fm_lock_release "$SPAWN_TREEHOUSE_PROJECT_LOCK"
 fi
-if [ "$SPAWN_TASK_SET_LOCK_HELD" = 1 ]; then
+if [ "$SPAWN_TASK_SET_LOCK_HELD" = 1 ] && [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" != 1 ]; then
   # The record is published, so this task is now part of the set a teardown
   # enumerates and locks per task. The set lock is only needed across that
   # publication.
   SPAWN_TASK_SET_LOCK_HELD=0
   fm_lock_release "$SPAWN_TASK_SET_LOCK"
 fi
-"$SCRIPT_DIR/fm-home-summary-refresh.sh" --best-effort || true
+if [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" != 1 ]; then
+  "$SCRIPT_DIR/fm-home-summary-refresh.sh" --best-effort || true
+fi
 [ "$BACKEND" = orca ] && ORCA_ABORT_CLEANUP=0
 
 sq_brief=$(shell_quote "$BRIEF")
@@ -4972,6 +4981,10 @@ fi
 
 spawn_record_traceparent() {
   local meta="$STATE/$ID.meta" status=0 acquired=0
+  if [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" = 1 ]; then
+    printf 'traceparent=%s\n' "$SPAWN_TRACEPARENT" >>"$SPAWN_META_TMP"
+    return
+  fi
   # Fresh publication still owns the lock. Relaunch deliberately uses a short
   # independent critical section so other metadata interfaces can serialize.
   if [ "$SPAWN_META_LOCK_HELD" != 1 ]; then
@@ -5114,24 +5127,51 @@ if ! (umask 077 && printf '%s\n' "$LAUNCH" >"$LAUNCH_STAGE" &&
 fi
 sleep 0.3
 SPAWN_LAUNCH_SENT=1
-SPAWN_LAUNCH_LITERAL_STATUS=0
-spawn_send_literal "$T" ". $(shell_quote "$LAUNCH_FILE")" || SPAWN_LAUNCH_LITERAL_STATUS=$?
+if spawn_send_literal "$T" ". $(shell_quote "$LAUNCH_FILE")"; then
+  :
+else
+  SPAWN_LAUNCH_SEND_STATUS=$?
+  if [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" = 1 ]; then
+    cmux_pi_spawn_fail "cmux could not submit Pi's staged launch command, so the workspace may contain only an idle shell and no live worker record will be published"
+  fi
+  exit "$SPAWN_LAUNCH_SEND_STATUS"
+fi
 sleep 0.3
 if [ "${HERDR_PROJECTED:-0}" -eq 1 ]; then
   HERDR_PROJECTION_ABORT_CLEANUP=0
   spawn_herdr_presentation_order_lock_release
 fi
-SPAWN_LAUNCH_ENTER_STATUS=0
-spawn_send_key "$T" Enter || SPAWN_LAUNCH_ENTER_STATUS=$?
+if spawn_send_key "$T" Enter; then
+  :
+else
+  SPAWN_LAUNCH_SEND_STATUS=$?
+  if [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" = 1 ]; then
+    cmux_pi_spawn_fail "cmux could not submit Pi's staged launch command, so the workspace may contain only an idle shell and no live worker record will be published"
+  fi
+  exit "$SPAWN_LAUNCH_SEND_STATUS"
+fi
 case "$BACKEND:$HARNESS" in
   cmux:pi|cmux:pi-signed)
-    if [ "$SPAWN_LAUNCH_LITERAL_STATUS" -ne 0 ] || [ "$SPAWN_LAUNCH_ENTER_STATUS" -ne 0 ]; then
-      cmux_pi_spawn_fail "cmux could not submit Pi's staged launch command, so the workspace may contain only an idle shell and no live worker record will be published"
-      exit 1
-    fi
     if ! cmux_pi_wait_for_processing; then
       cmux_pi_spawn_fail "cmux created the endpoint but Pi did not report processing its launch brief, so the workspace may contain only an idle shell and no live worker record will be published"
       exit 1
+    fi
+    if [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" = 1 ]; then
+      if ! fm_backlog_atomic_transition publish "$SPAWN_META_TMP" "$STATE/$ID.meta" "task record" "$STATE"; then
+        echo "error: confirmed Pi task record for $ID could not be published ($FM_BACKLOG_TRANSITION_ERROR)" >&2
+        exit 1
+      fi
+      SPAWN_META_TMP=
+      SPAWN_DEFER_CMUX_PI_PUBLISH=0
+      if [ "$SPAWN_TREEHOUSE_PROJECT_LOCK_HELD" = 1 ]; then
+        SPAWN_TREEHOUSE_PROJECT_LOCK_HELD=0
+        fm_lock_release "$SPAWN_TREEHOUSE_PROJECT_LOCK"
+      fi
+      if [ "$SPAWN_TASK_SET_LOCK_HELD" = 1 ]; then
+        SPAWN_TASK_SET_LOCK_HELD=0
+        fm_lock_release "$SPAWN_TASK_SET_LOCK"
+      fi
+      "$SCRIPT_DIR/fm-home-summary-refresh.sh" --best-effort || true
     fi
     ;;
 esac
