@@ -1182,6 +1182,13 @@ FM_TEST_END ... tests/fm-herdr-launch-setup-e2e.test.sh exit=0 duration_ms=2902 
 `tests/fm-control-relaunch.test.sh` models Herdr's asynchronous acceptance through the same public relaunch interface and fails if the staged source arrives before the delayed setup marker.
 `fm-spawn.sh` allows ten seconds for the marker, refuses before typing the staged source line when it remains absent, and uses this barrier only to prove setup ordering rather than later harness readiness.
 
+On 2026-09-25, a development-only evaluation also exercised the public relaunch with real Pi 0.87.1 (`openai-codex/gpt-6-sol`, low thinking) on Herdr 0.9.1 in the named isolated lab `fm-lab-pi-brief-proof-61627-18346`.
+After accepting Pi's folder-trust prompt for the disposable candidate, the worker processed the generated launch brief, called its read tool on an untracked challenge file, and returned `LAUNCH_READY 33884 ae32d47623a4e47e`, the expected sum and nonce that were absent from the brief.
+Pi's persisted assistant and tool-result messages proved brief processing beyond process startup; the staged candidate diff and all candidate file bytes were unchanged, and guarded lab teardown passed the default-session tripwire.
+The focused `tests/fm-herdr-launch-setup-e2e.test.sh` regression also passed without a skip.
+This model evaluation is development evidence, not a live-LLM CI test.
+Claude brief processing remains untested: its earlier real launch stopped at the external-import consent dialog, and this Pi evaluation neither requested nor supplied that consent.
+
 ### Prune and respawn
 
 The real label-collision reproduction is owned by:
