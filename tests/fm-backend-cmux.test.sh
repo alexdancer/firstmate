@@ -580,6 +580,42 @@ test_send_prefers_exact_surface_over_same_title_in_current_window() {
   pass "cmux sends to the exact live pair before considering same-title recovery"
 }
 
+test_send_refuses_recovery_while_exact_workspace_exists() {
+  local dir fb title status
+  dir="$TMP_ROOT/ready-exact-workspace-live"; mkdir -p "$dir/responses"
+  title=$(cmux_expected_scoped_title fm-label)
+  cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
+  cmux_panes_empty_response "$dir" 2
+  cmux_windows_response "$dir" 3 "e1111111-0000-0000-0000-000000000000" 1 "e2222222-0000-0000-0000-000000000000" 1
+  cmux_workspace_list_response "$dir" 4 "cccccccc-2222-2222-2222-222222222222" "$title"
+  cmux_workspace_list_response "$dir" 5 "aaaaaaaa-0000-0000-0000-000000000000" "$title"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_literal "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "probe" fm-label' "$ROOT"
+  status=$?
+  [ "$status" -ne 0 ] || fail "send should refuse title recovery while the exact workspace still exists"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''send'$'\x1f' \
+    "send targeted a same-title workspace after the exact surface probe failed"
+  pass "cmux refuses title recovery while the exact workspace is live"
+}
+
+test_send_refuses_recovery_when_exact_status_is_inconclusive() {
+  local dir fb title status
+  dir="$TMP_ROOT/ready-exact-status-unknown"; mkdir -p "$dir/responses"
+  title=$(cmux_expected_scoped_title fm-label)
+  cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
+  printf '1\n' > "$dir/responses/2.exit"
+  printf '1\n' > "$dir/responses/3.exit"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_literal "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "probe" fm-label' "$ROOT"
+  status=$?
+  [ "$status" -ne 0 ] || fail "send should refuse title recovery when exact workspace status is inconclusive"
+  assert_not_contains "$(cat "$dir/log")" $'\x1f''send'$'\x1f' \
+    "send targeted a same-title workspace without proof that the exact workspace is gone"
+  pass "cmux refuses title recovery on an incomplete cross-window probe"
+}
+
 test_target_ready_rejects_label_mismatch() {
   local dir fb status
   dir="$TMP_ROOT/ready-label-mismatch"; mkdir -p "$dir/responses"
@@ -664,7 +700,9 @@ test_send_key_recovers_stale_target_by_label() {
   title=$(cmux_expected_scoped_title fm-label)
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
   cmux_panes_empty_response "$dir" 2
-  cmux_panes_response "$dir" 3 "dddddddd-3333-3333-3333-333333333333"
+  cmux_windows_response "$dir" 3 "eeeeeeee-0000-0000-0000-000000000000" 1
+  cmux_workspace_list_response "$dir" 4 "cccccccc-2222-2222-2222-222222222222" "$title"
+  cmux_panes_response "$dir" 5 "dddddddd-3333-3333-3333-333333333333"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_send_key "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" Enter fm-label' "$ROOT"
@@ -1025,6 +1063,19 @@ test_window_of_workspace_empty_when_not_found() {
   pass "fm_backend_cmux_window_of_workspace: echoes nothing when no window holds the workspace"
 }
 
+test_window_of_workspace_refuses_incomplete_scan() {
+  local dir fb status
+  dir="$TMP_ROOT/win-of-ws-incomplete"; mkdir -p "$dir/responses"
+  cmux_windows_response "$dir" 1 "e1111111-0000-0000-0000-000000000000" 1
+  printf '1\n' > "$dir/responses/2.exit"
+  fb=$(make_cmux_fakebin "$dir")
+  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_window_of_workspace "aaaaaaaa-0000-0000-0000-000000000000"' "$ROOT"
+  status=$?
+  [ "$status" -ne 0 ] || fail "an incomplete window scan must not prove the workspace absent"
+  pass "cmux window lookup distinguishes absence from an incomplete scan"
+}
+
 # --- kill: close the task workspace, adding a sibling when it is the last one -
 
 # The common case: the task workspace shares its window with at least one other
@@ -1096,14 +1147,14 @@ test_kill_recovers_stale_target_by_label() {
   dir="$TMP_ROOT/kill-stale-target"; mkdir -p "$dir/responses"
   title=$(cmux_expected_scoped_title fm-label)
   # target_ready label recovery: 1 workspace list finds the expected title
-  # under a refreshed id, 2 finds the old surface absent, then 3 resolves the new surface.
+  # under a refreshed id, 2 finds the old surface absent, then 5 resolves the new surface.
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
   cmux_panes_empty_response "$dir" 2
-  cmux_panes_response "$dir" 3 "dddddddd-3333-3333-3333-333333333333"
-  # window_of_workspace on the refreshed id: 4 list-windows (not last), then
-  # 5 workspace list --window.
-  cmux_windows_response "$dir" 4 "eeeeeeee-0000-0000-0000-000000000000" 2
-  cmux_workspace_list_response "$dir" 5 "cccccccc-2222-2222-2222-222222222222" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
+  cmux_windows_response "$dir" 3 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 4 "cccccccc-2222-2222-2222-222222222222" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
+  cmux_panes_response "$dir" 5 "dddddddd-3333-3333-3333-333333333333"
+  cmux_windows_response "$dir" 6 "eeeeeeee-0000-0000-0000-000000000000" 2
+  cmux_workspace_list_response "$dir" 7 "cccccccc-2222-2222-2222-222222222222" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
     bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "" fm-label' "$ROOT"
@@ -1189,6 +1240,8 @@ test_target_ready_fails_when_target_absent
 test_target_ready_checks_expected_label
 test_target_ready_accepts_exact_surface_when_title_listing_is_masked
 test_send_prefers_exact_surface_over_same_title_in_current_window
+test_send_refuses_recovery_while_exact_workspace_exists
+test_send_refuses_recovery_when_exact_status_is_inconclusive
 test_target_ready_rejects_label_mismatch
 test_capture_trims_locally
 test_capture_fails_when_read_screen_fails_empty
@@ -1215,6 +1268,7 @@ test_send_text_submit_popup_autocomplete_requires_second_enter
 test_send_text_submit_send_failed_when_target_absent
 test_window_of_workspace_finds_window_and_count
 test_window_of_workspace_empty_when_not_found
+test_window_of_workspace_refuses_incomplete_scan
 test_kill_closes_workspace_directly_when_not_last
 test_kill_adds_sibling_when_last_in_window
 test_kill_is_best_effort_when_close_workspace_fails

@@ -12,16 +12,19 @@ TASK="test-cmux-pi-launch-$$"
 LABEL="fm-$TASK"
 LAB=
 SPAWNED=0
+WORKSPACE_ID=
 
 cleanup() {
-  local cleanup_ok=1 wsid=
+  local cleanup_ok=1 wsid=$WORKSPACE_ID wininfo=
+  if [ -n "$LAB" ]; then
+    FM_HOME="$LAB"
+    export FM_HOME
+  fi
   if [ "$SPAWNED" -eq 1 ] && [ -n "$LAB" ]; then
     if ! FM_HOME="$LAB" "$ROOT/bin/fm-teardown.sh" "$TASK" >/dev/null 2>&1; then
       cleanup_ok=0
     fi
   elif [ -n "$LAB" ]; then
-    FM_HOME="$LAB"
-    export FM_HOME
     if fm_backend_cmux_cli ping >/dev/null 2>&1; then
       for _ in $(seq 1 10); do
         wsid=$(fm_backend_cmux_workspace_id_for_label "$(fm_backend_cmux_scoped_title "$LABEL")")
@@ -36,6 +39,15 @@ cleanup() {
       . "$ROOT/tests/cmux-test-safety.sh"
       cmux_safe_close_workspace "$wsid" "$LABEL" >/dev/null 2>&1 || cleanup_ok=0
     else
+      cleanup_ok=0
+    fi
+  fi
+  if [ -n "$LAB" ]; then
+    if [ -z "$wsid" ]; then
+      cleanup_ok=0
+    elif ! wininfo=$(fm_backend_cmux_window_of_workspace "$wsid"); then
+      cleanup_ok=0
+    elif [ -n "$wininfo" ]; then
       cleanup_ok=0
     fi
   fi
@@ -88,6 +100,8 @@ FM_HOME="$LAB" "$ROOT/bin/fm-spawn.sh" "$TASK" "$LAB/projects/probe" \
   || fail "the real Pi cmux spawn did not confirm that Pi began processing its launch brief"
 SPAWNED=1
 assert_present "$LAB/state/$TASK.meta" "confirmed real Pi spawn did not publish metadata"
+WORKSPACE_ID=$(sed -n 's/^cmux_workspace_id=//p' "$LAB/state/$TASK.meta" | head -1)
+[ -n "$WORKSPACE_ID" ] || fail "confirmed real Pi spawn did not record its exact cmux workspace"
 
 for _ in $(seq 1 60); do
   grep -Eq '^done( \[at=[0-9]+\])?: cmux Pi launch probe passed$' "$LAB/state/$TASK.status" 2>/dev/null && break

@@ -417,7 +417,7 @@ fm_backend_cmux_surface_exists() {  # <workspace_id> <surface_id>
 # current-window scoped and can lag a successful create response, so the exact
 # UUID pair remains authoritative when its surface exists structurally.
 fm_backend_cmux_target_ready() {  # <target> [expected-label]
-  local expected_label=${2:-} expected_title listing listed_wsid title wsid sfid
+  local expected_label=${2:-} expected_title listing listed_wsid title wsid sfid wininfo
   fm_backend_cmux_parse_target "$1" || return 1
   if [ -n "$expected_label" ]; then
     expected_title=$(fm_backend_cmux_scoped_title "$expected_label")
@@ -433,6 +433,8 @@ fm_backend_cmux_target_ready() {  # <target> [expected-label]
         return 0
       fi
       [ -n "$listed_wsid" ] || return 1
+      wininfo=$(fm_backend_cmux_window_of_workspace "$FM_BACKEND_CMUX_WORKSPACE") || return 1
+      [ -z "$wininfo" ] || return 1
       wsid=$listed_wsid
     fi
     sfid=$(fm_backend_cmux_surface_id_for_workspace "$wsid")
@@ -598,10 +600,12 @@ fm_backend_cmux_send_text_submit() {  # <target> <text> <retries> <enter-sleep> 
 # The count comes from the same scoped workspace list that confirms membership.
 fm_backend_cmux_window_of_workspace() {  # <workspace_id> -> "<window_id> <count>"
   local wsid=$1 wins wid wss count
-  wins=$(fm_backend_cmux_cli list-windows --json --id-format uuids 2>/dev/null) || return 0
+  wins=$(fm_backend_cmux_cli list-windows --json --id-format uuids 2>/dev/null) || return 1
+  printf '%s' "$wins" | jq -e 'type == "array" and all(.[]; (.id | type) == "string" and (.id | length) > 0)' >/dev/null 2>&1 || return 1
   while IFS= read -r wid; do
     [ -n "$wid" ] || continue
-    wss=$(fm_backend_cmux_cli workspace list --json --id-format uuids --window "$wid" 2>/dev/null) || continue
+    wss=$(fm_backend_cmux_cli workspace list --json --id-format uuids --window "$wid" 2>/dev/null) || return 1
+    printf '%s' "$wss" | jq -e '(.workspaces | type) == "array" and all(.workspaces[]; (.id | type) == "string" and (.id | length) > 0)' >/dev/null 2>&1 || return 1
     count=$(printf '%s' "$wss" | jq -er --arg id "$wsid" '
       (.workspaces // []) as $workspaces
       | select(any($workspaces[]?; .id == $id))
@@ -610,6 +614,7 @@ fm_backend_cmux_window_of_workspace() {  # <workspace_id> -> "<window_id> <count
     printf '%s %s' "$wid" "$count"
     return 0
   done < <(printf '%s' "$wins" | jq -r '.[]? | .id' 2>/dev/null)
+  return 0
 }
 
 # fm_backend_cmux_kill: remove the task's whole workspace, best-effort (mirrors
@@ -636,7 +641,7 @@ fm_backend_cmux_kill() {  # <target> [unused] [expected-label]
     fm_backend_cmux_parse_target "$1" || return 0
   fi
   wsid=$FM_BACKEND_CMUX_WORKSPACE
-  wininfo=$(fm_backend_cmux_window_of_workspace "$wsid")
+  wininfo=$(fm_backend_cmux_window_of_workspace "$wsid") || wininfo=
   win=${wininfo%% *}
   count=${wininfo##* }
   if [ -n "$win" ] && [ "$count" = 1 ]; then

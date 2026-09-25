@@ -3734,7 +3734,7 @@ cmux_pi_wait_for_processing() {
 
 cmux_pi_spawn_fail() {  # <detail>
   local detail=$1
-  fm_backend_cmux_kill "$T" "" "$W" 2>/dev/null || true
+  fm_backend_cmux_kill "$T" 2>/dev/null || true
   detail="$detail; cleanup was attempted for the exact cmux endpoint and the isolated project copy is preserved at $WT"
   printf '%s\n' "$(status_stamp_line "failed: $detail")" >>"$STATE/$ID.status"
   echo "error: $detail; inspect cmux window $T if it remains" >&2
@@ -5158,7 +5158,7 @@ case "$BACKEND:$HARNESS" in
     fi
     if [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" = 1 ]; then
       if ! fm_backlog_atomic_transition publish "$SPAWN_META_TMP" "$STATE/$ID.meta" "task record" "$STATE"; then
-        echo "error: confirmed Pi task record for $ID could not be published ($FM_BACKLOG_TRANSITION_ERROR)" >&2
+        cmux_pi_spawn_fail "Pi began processing but its task record could not be published ($FM_BACKLOG_TRANSITION_ERROR)"
         exit 1
       fi
       SPAWN_META_TMP=

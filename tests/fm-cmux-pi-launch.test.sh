@@ -14,11 +14,12 @@ SUCCESS_ID="cmux-pi-ready-ok-$$"
 FAILURE_ID="cmux-pi-ready-fail-$$"
 SEND_FAILURE_ID="cmux-pi-send-fail-$$"
 ENTER_FAILURE_ID="cmux-pi-enter-fail-$$"
+PUBLISH_FAILURE_ID="cmux-pi-publish-fail-$$"
 TMUX_FAILURE_ID="tmux-pi-send-fail-$$"
 
 cleanup_launch_tmp() {
-  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID" "/tmp/fm-$SEND_FAILURE_ID" "/tmp/fm-$ENTER_FAILURE_ID" "/tmp/fm-$TMUX_FAILURE_ID"
-  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" -o -name "fm-$SEND_FAILURE_ID+*" -o -name "fm-$ENTER_FAILURE_ID+*" -o -name "fm-$TMUX_FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
+  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID" "/tmp/fm-$SEND_FAILURE_ID" "/tmp/fm-$ENTER_FAILURE_ID" "/tmp/fm-$PUBLISH_FAILURE_ID" "/tmp/fm-$TMUX_FAILURE_ID"
+  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" -o -name "fm-$SEND_FAILURE_ID+*" -o -name "fm-$ENTER_FAILURE_ID+*" -o -name "fm-$PUBLISH_FAILURE_ID+*" -o -name "fm-$TMUX_FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
   fm_test_cleanup
 }
 trap cleanup_launch_tmp EXIT INT TERM
@@ -235,6 +236,36 @@ test_spawn_refuses_cmux_launch_enter_failure() {
   pass "fm-spawn refuses a failed cmux Pi Enter without publishing metadata"
 }
 
+test_spawn_closes_started_pi_after_record_publication_failure() {
+  local fixture out status
+  fixture=$(make_case publish-failure "$PUBLISH_FAILURE_ID")
+  read_case "$fixture"
+  cat > "$FAKEBIN_DIR/mv" <<'SH'
+#!/usr/bin/env bash
+for arg in "$@"; do target=$arg; done
+if [ "$target" = "${FM_STATE_OVERRIDE:?}/${FM_FAKE_CMUX_ID:?}.meta" ]; then
+  exit 1
+fi
+exec /bin/mv "$@"
+SH
+  chmod +x "$FAKEBIN_DIR/mv"
+  out=$(run_case_spawn "$PUBLISH_FAILURE_ID" 1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn accepted Pi after its task record failed to publish"
+  assert_present "$CASE_DIR/launch-attempted" "the publication failure case did not start Pi"
+  assert_contains "$out" "Pi began processing but its task record could not be published" \
+    "spawn did not report the post-processing publication failure"
+  assert_contains "$(cat "$CASE_DIR/cmux.log")" \
+    'close-workspace --workspace aaaaaaaa-0000-0000-0000-000000000000' \
+    "spawn did not attempt exact cleanup of Pi after publication failed"
+  assert_absent "$HOME_DIR/state/$PUBLISH_FAILURE_ID.meta" \
+    "failed publication left a task record"
+  assert_absent "$HOME_DIR/state/$PUBLISH_FAILURE_ID.busy-state" \
+    "failed publication left a busy record"
+  assert_present "$COPY_DIR/README.md" "failed publication lost the isolated project copy"
+  pass "fm-spawn attempts exact Pi cleanup when post-processing metadata publication fails"
+}
+
 test_spawn_propagates_tmux_launch_send_failure() {
   local fixture out status
   fixture=$(make_case tmux-send-failure "$TMUX_FAILURE_ID")
@@ -266,6 +297,7 @@ test_spawn_accepts_only_after_pi_agent_start
 test_spawn_refuses_idle_shell_without_worker_record
 test_spawn_refuses_cmux_launch_send_failure
 test_spawn_refuses_cmux_launch_enter_failure
+test_spawn_closes_started_pi_after_record_publication_failure
 test_spawn_propagates_tmux_launch_send_failure
 
 echo "# all cmux Pi launch confirmation tests passed"
