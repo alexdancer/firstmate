@@ -152,6 +152,20 @@ run_case_spawn() {  # <id> <emit-pi-event> [fail-launch-send] [fail-launch-enter
       "$id" "$PROJECT_DIR" --scout --harness pi --backend cmux
 }
 
+assert_cmux_recovery_record() {
+  local confirmed=$2 record="$HOME_DIR/state/$1.cmux-launch-recovery" contents
+  assert_present "$record" "failed cmux Pi launch left no exact endpoint recovery record"
+  contents=$(cat "$record")
+  assert_contains "$contents" "endpoint=aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" \
+    "cmux recovery record lost the exact endpoint"
+  assert_contains "$contents" "worktree=$COPY_DIR" \
+    "cmux recovery record lost the isolated project copy"
+  assert_contains "$contents" "pi_start_confirmed=$confirmed" \
+    "cmux recovery record misstates Pi launch confirmation"
+  assert_contains "$contents" 'closure=unverified' \
+    "cmux recovery record treats a close attempt as proven closure"
+}
+
 test_spawn_accepts_only_after_pi_agent_start() {
   local fixture out status record
   fixture=$(make_case success "$SUCCESS_ID")
@@ -161,6 +175,8 @@ test_spawn_accepts_only_after_pi_agent_start() {
   expect_code 0 "$status" "spawn should accept the cmux endpoint after Pi reports agent_start"$'\n'"$out"
   assert_contains "$out" "spawned $SUCCESS_ID" "spawn did not report the confirmed Pi worker"
   assert_present "$HOME_DIR/state/$SUCCESS_ID.meta" "confirmed Pi spawn did not publish metadata"
+  assert_absent "$HOME_DIR/state/$SUCCESS_ID.cmux-launch-recovery" \
+    "confirmed Pi spawn left a failed-launch recovery record"
   assert_absent "$CASE_DIR/early-meta" "spawn published metadata before Pi reported processing"
   assert_absent "$CASE_DIR/early-busy" "spawn reported a busy Pi before its lifecycle event"
   assert_present "$CASE_DIR/launch-attempted" "the staged Pi launch was not submitted"
@@ -191,6 +207,7 @@ test_spawn_refuses_idle_shell_without_worker_record() {
     "spawn pretended an unverified cmux endpoint was live"
   assert_absent "$HOME_DIR/state/$FAILURE_ID.meta" \
     "refused cmux Pi launch left a published worker record"
+  assert_cmux_recovery_record "$FAILURE_ID" 0
   assert_absent "$CASE_DIR/early-meta" "unverified Pi launch was visible through metadata during the wait"
   assert_absent "$CASE_DIR/early-busy" "unverified Pi launch was reported busy during the wait"
   assert_present "$CASE_DIR/launch-attempted" \
@@ -217,6 +234,7 @@ test_spawn_refuses_cmux_launch_send_failure() {
     "spawn did not report the failed cmux Pi launch send"
   assert_absent "$HOME_DIR/state/$SEND_FAILURE_ID.meta" \
     "failed cmux Pi launch send published a worker record"
+  assert_cmux_recovery_record "$SEND_FAILURE_ID" 0
   assert_present "$COPY_DIR/README.md" "failed cmux Pi launch send lost the isolated copy"
   pass "fm-spawn refuses a failed cmux Pi launch send without publishing metadata"
 }
@@ -232,6 +250,7 @@ test_spawn_refuses_cmux_launch_enter_failure() {
     "spawn did not report the failed cmux Pi Enter"
   assert_absent "$HOME_DIR/state/$ENTER_FAILURE_ID.meta" \
     "failed cmux Pi Enter published a worker record"
+  assert_cmux_recovery_record "$ENTER_FAILURE_ID" 0
   assert_present "$COPY_DIR/README.md" "failed cmux Pi Enter lost the isolated copy"
   pass "fm-spawn refuses a failed cmux Pi Enter without publishing metadata"
 }
@@ -260,9 +279,15 @@ SH
     "spawn did not attempt exact cleanup of Pi after publication failed"
   assert_absent "$HOME_DIR/state/$PUBLISH_FAILURE_ID.meta" \
     "failed publication left a task record"
+  assert_cmux_recovery_record "$PUBLISH_FAILURE_ID" 1
   assert_absent "$HOME_DIR/state/$PUBLISH_FAILURE_ID.busy-state" \
     "failed publication left a busy record"
   assert_present "$COPY_DIR/README.md" "failed publication lost the isolated project copy"
+  out=$(run_case_spawn "$PUBLISH_FAILURE_ID" 1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn retried a cmux Pi launch with unresolved closure"
+  assert_contains "$out" 'has an unresolved cmux launch' \
+    "spawn did not refuse a retry while exact endpoint closure remains unverified"
   pass "fm-spawn attempts exact Pi cleanup when post-processing metadata publication fails"
 }
 

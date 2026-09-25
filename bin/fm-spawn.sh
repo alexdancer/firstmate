@@ -1170,6 +1170,7 @@ SPAWN_META_LOCK_HELD=0
 SPAWN_META_PUBLISH_STARTED=0
 SPAWN_FRESH_COMMIT_PENDING=0
 SPAWN_DEFER_CMUX_PI_PUBLISH=0
+SPAWN_CMUX_PI_START_CONFIRMED=0
 SPAWN_TASK_SET_LOCK=
 SPAWN_TASK_SET_LOCK_HELD=0
 SPAWN_TREEHOUSE_PROJECT_LOCK=
@@ -1645,6 +1646,10 @@ if ! fm_lock_try_acquire "$SPAWN_TASK_LOCK"; then
   exit 1
 fi
 SPAWN_TASK_LOCK_HELD=1
+if [ -e "$STATE/$ID.cmux-launch-recovery" ] || [ -L "$STATE/$ID.cmux-launch-recovery" ]; then
+  echo "error: task $ID has an unresolved cmux launch at $STATE/$ID.cmux-launch-recovery; inspect and resolve that exact endpoint before retrying" >&2
+  exit 1
+fi
 PROJ=
 ARG3=
 FIRSTMATE_HOME=
@@ -3733,11 +3738,27 @@ cmux_pi_wait_for_processing() {
 }
 
 cmux_pi_spawn_fail() {  # <detail>
-  local detail=$1
+  local detail=$1 recovery="$STATE/$ID.cmux-launch-recovery" stage= recovery_note=
+  stage=$(mktemp "$STATE/.$ID.cmux-launch-recovery.XXXXXX" 2>/dev/null) || stage=
+  if [ -n "$stage" ]; then
+    if ! printf 'task_id=%s\nendpoint=%s\nworktree=%s\nproject=%s\nharness=%s\npi_start_confirmed=%s\nclosure=unverified\n' \
+      "$ID" "$T" "$WT" "$PROJ_ABS" "$HARNESS" "$SPAWN_CMUX_PI_START_CONFIRMED" >"$stage"; then
+      echo "error: could not write cmux launch recovery at $stage" >&2
+      rm -f "$stage" 2>/dev/null || true
+    elif ! fm_backlog_atomic_transition publish "$stage" "$recovery" "cmux launch recovery" "$STATE"; then
+      echo "error: could not publish cmux launch recovery at $recovery" >&2
+      recovery_note="staged recovery record: $stage"
+    else
+      recovery_note="recovery record: $recovery"
+    fi
+  else
+    echo "error: could not stage cmux launch recovery at $recovery" >&2
+  fi
   fm_backend_cmux_kill "$T" 2>/dev/null || true
-  detail="$detail; cleanup was attempted for the exact cmux endpoint and the isolated project copy is preserved at $WT"
+  [ -n "$recovery_note" ] || recovery_note="recovery record could not be published"
+  detail="$detail; exact cmux endpoint $T closure is unverified, and the isolated project copy is preserved at $WT; $recovery_note"
   printf '%s\n' "$(status_stamp_line "failed: $detail")" >>"$STATE/$ID.status"
-  echo "error: $detail; inspect cmux window $T if it remains" >&2
+  echo "error: $detail" >&2
 }
 
 kimi_capture() {
@@ -5156,6 +5177,7 @@ case "$BACKEND:$HARNESS" in
       cmux_pi_spawn_fail "cmux created the endpoint but Pi did not report processing its launch brief, so the workspace may contain only an idle shell and no live worker record will be published"
       exit 1
     fi
+    SPAWN_CMUX_PI_START_CONFIRMED=1
     if [ "$SPAWN_DEFER_CMUX_PI_PUBLISH" = 1 ]; then
       if ! fm_backlog_atomic_transition publish "$SPAWN_META_TMP" "$STATE/$ID.meta" "task record" "$STATE"; then
         cmux_pi_spawn_fail "Pi began processing but its task record could not be published ($FM_BACKLOG_TRANSITION_ERROR)"
