@@ -66,7 +66,9 @@ brief.write_text(brief.read_text().replace("{TASK}", f'''Run a cmux Pi launch pr
 
 Write exactly `cmux Pi launch probe passed` followed by a newline to `{report}`.
 Then append `done [at=<epoch>]: cmux Pi launch probe passed` to the task status file as the instructions require.
-Do not change project files or make a commit.'''))
+Do not change project files or make a commit.''').replace(
+    "{FIRSTMATE_SPEC}", "Complete only the launch probe described above."
+))
 PY
 
 FM_HOME="$LAB" "$ROOT/bin/fm-spawn.sh" "$TASK" "$LAB/projects/probe" \

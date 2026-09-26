@@ -1099,11 +1099,14 @@ test_kill_closes_workspace_directly_when_not_last() {
   cmux_panes_response "$dir" 1 "bbbbbbbb-1111-1111-1111-111111111111"
   cmux_windows_response "$dir" 2 "eeeeeeee-0000-0000-0000-000000000000" 2
   cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "the-task" "ffffffff-0000-0000-0000-000000000000" "other"
-  printf '1\n' > "$dir/responses/5.exit"
-  printf 'Error: not_found: Workspace not found\n' > "$dir/responses/5.out"
+  # A real close acknowledgement can precede the workspace's removal.
+  cmux_panes_response "$dir" 5 "bbbbbbbb-1111-1111-1111-111111111111"
+  printf '1\n' > "$dir/responses/6.exit"
+  printf 'Error: not_found: Workspace not found\n' > "$dir/responses/6.out"
   fb=$(make_cmux_fakebin "$dir")
   PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
-    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT" \
+    || fail "kill did not wait for the acknowledged close to finish"
   assert_contains "$(cat "$dir/log")" $'\x1f''close-workspace'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000' \
     "kill did not close the task workspace"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''new-workspace' \

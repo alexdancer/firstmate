@@ -621,7 +621,7 @@ fm_backend_cmux_workspace_confirmed_gone() {  # <workspace_id>
 # leaving that window a fresh default workspace (never an fm-<home>- title, so
 # recovery/list_live ignore it) - cmux's own "closed the last tab" outcome.
 fm_backend_cmux_kill() {  # <target> [unused] [expected-label]
-  local expected_label=${3:-} wsid wininfo win count
+  local expected_label=${3:-} wsid wininfo win count attempt
   fm_backend_cmux_parse_target "$1" || return 1
   wsid=$FM_BACKEND_CMUX_WORKSPACE
   fm_backend_cmux_target_ready "$1" "$expected_label" || {
@@ -638,7 +638,12 @@ fm_backend_cmux_kill() {  # <target> [unused] [expected-label]
     *[!0-9]*|'') return 1 ;;
   esac
   fm_backend_cmux_cli close-workspace --workspace "$wsid" >/dev/null 2>&1 || return 1
-  fm_backend_cmux_workspace_confirmed_gone "$wsid"
+  # The app acknowledges close before its workspace removal finishes.
+  for attempt in {1..10}; do
+    fm_backend_cmux_workspace_confirmed_gone "$wsid" && return 0
+    [ "$attempt" -eq 10 ] || sleep 0.1
+  done
+  return 1
 }
 
 # fm_backend_cmux_list_live: recovery/orphan discovery. Lists every workspace
