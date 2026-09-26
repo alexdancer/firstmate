@@ -370,8 +370,9 @@ test_spawn_recovers_exact_endpoint_before_worktree_confirmation() {
   assert_absent "$HOME_DIR/state/$WORKTREE_FAILURE_ID.meta" \
     "pre-launch abort published an unverified worker"
   assert_present "$COPY_DIR/README.md" "pre-launch abort lost the isolated project copy"
-  out=$(run_case_spawn "$WORKTREE_FAILURE_ID" 0)
-  [ "$?" -ne 0 ] || fail "spawn retried while the early failure's endpoint remained unresolved"
+  if out=$(run_case_spawn "$WORKTREE_FAILURE_ID" 0); then
+    fail "spawn retried while the early failure's endpoint remained unresolved"
+  fi
   assert_contains "$out" 'has an unresolved cmux launch' \
     "pre-launch recovery did not block an unsafe retry"
   pass "fm-spawn retains exact cmux recovery when worktree discovery aborts"

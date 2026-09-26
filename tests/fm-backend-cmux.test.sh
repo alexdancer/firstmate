@@ -1151,9 +1151,10 @@ test_kill_refuses_failed_close_workspace() {
   cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "the-task" "ffffffff-0000-0000-0000-000000000000" "other"
   printf '1\n' > "$dir/responses/4.exit"
   fb=$(make_cmux_fakebin "$dir")
-  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
-    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
-  [ "$?" -ne 0 ] || fail "kill accepted a failed close-workspace command"
+  if PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"; then
+    fail "kill accepted a failed close-workspace command"
+  fi
   assert_contains "$(cat "$dir/log")" $'\x1f''close-workspace'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000' \
     "kill should still attempt close-workspace"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-surface' \
@@ -1169,9 +1170,10 @@ test_kill_refuses_unconfirmed_close() {
   cmux_workspace_list_response "$dir" 3 "aaaaaaaa-0000-0000-0000-000000000000" "the-task" "ffffffff-0000-0000-0000-000000000000" "other"
   cmux_panes_response "$dir" 5 "bbbbbbbb-1111-1111-1111-111111111111"
   fb=$(make_cmux_fakebin "$dir")
-  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
-    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
-  [ "$?" -ne 0 ] || fail "kill accepted a success-shaped close while the exact endpoint remained live"
+  if PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"; then
+    fail "kill accepted a success-shaped close while the exact endpoint remained live"
+  fi
   assert_contains "$(cat "$dir/log")" $'\x1f''close-workspace'$'\x1f''--workspace'$'\x1f''aaaaaaaa-0000-0000-0000-000000000000' \
     "kill did not attempt the exact close"
   pass "fm_backend_cmux_kill: refuses a close that leaves the exact endpoint live"
@@ -1198,9 +1200,10 @@ test_kill_refuses_unlabeled_changed_surface() {
   dir="$TMP_ROOT/kill-changed-surface"; mkdir -p "$dir/responses"
   cmux_panes_response "$dir" 1 "dddddddd-3333-3333-3333-333333333333"
   fb=$(make_cmux_fakebin "$dir")
-  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
-    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"
-  [ "$?" -ne 0 ] || fail "kill accepted a missing recorded surface as a completed close"
+  if PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111"' "$ROOT"; then
+    fail "kill accepted a missing recorded surface as a completed close"
+  fi
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-workspace' \
     "kill closed a workspace after its recorded surface disappeared"
   pass "fm_backend_cmux_kill: refuses an unlabeled changed surface"
@@ -1257,9 +1260,10 @@ test_live_cleanup_guard_refuses_unconfirmed_close() {
   cmux_workspace_list_response "$dir" 6 "aaaaaaaa-0000-0000-0000-000000000000" "$title" "ffffffff-0000-0000-0000-000000000000" "other"
   cmux_panes_response "$dir" 8 "bbbbbbbb-1111-1111-1111-111111111111"
   fb=$(make_cmux_fakebin "$dir")
-  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
-    bash -c '. "$0/bin/backends/cmux.sh"; . "$0/tests/cmux-test-safety.sh"; cmux_safe_close_workspace "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" fm-test-guard' "$ROOT"
-  [ "$?" -ne 0 ] || fail "live cleanup accepted a success-shaped close that left the test worker live"
+  if PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; . "$0/tests/cmux-test-safety.sh"; cmux_safe_close_workspace "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" fm-test-guard' "$ROOT"; then
+    fail "live cleanup accepted a success-shaped close that left the test worker live"
+  fi
   pass "live cmux cleanup guard refuses an unconfirmed workspace close"
 }
 
@@ -1270,9 +1274,10 @@ test_kill_refuses_stale_target_with_same_title() {
   cmux_workspace_list_response "$dir" 1 "cccccccc-2222-2222-2222-222222222222" "$title"
   cmux_panes_empty_response "$dir" 2
   fb=$(make_cmux_fakebin "$dir")
-  PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
-    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "" fm-label' "$ROOT"
-  [ "$?" -ne 0 ] || fail "kill accepted an unverified stale target as closed"
+  if PATH="$fb:$PATH" FM_CMUX_LOG="$dir/log" FM_CMUX_RESPONSES="$dir/responses" \
+    bash -c '. "$0/bin/backends/cmux.sh"; fm_backend_cmux_kill "aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" "" fm-label' "$ROOT"; then
+    fail "kill accepted an unverified stale target as closed"
+  fi
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-workspace' \
     "kill closed a same-title workspace without exact identity"
   assert_not_contains "$(cat "$dir/log")" $'\x1f''close-surface' \

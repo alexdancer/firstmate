@@ -1216,7 +1216,7 @@ parse_orca_worktree_result() {
 }
 
 cmux_pi_spawn_fail() {  # <detail>
-  local detail=$1 recovery="$STATE/$ID.cmux-launch-recovery" stage= recovery_note= copy=${WT:-} closure=unverified source= confirmed_stage=
+  local detail=$1 recovery="$STATE/$ID.cmux-launch-recovery" stage='' recovery_note='' copy=${WT:-} closure=unverified source='' confirmed_stage=''
   SPAWN_CMUX_PI_RECOVERY_ARMED=0
   stage=$(mktemp "$STATE/.$ID.cmux-launch-recovery.XXXXXX" 2>/dev/null) || stage=
   if [ -n "$stage" ]; then
