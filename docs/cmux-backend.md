@@ -47,7 +47,7 @@ Routine supervision uses `bin/fm-peek.sh <id>` and `FM_HOME=<home> bin/fm-send.s
 Task workspace and surface creation use `focus=false`.
 
 Verify setup by spawning a small task and confirming the worker begins processing its instructions before spawn reports success and leaves committed metadata with `backend=cmux`, `cmux_workspace_id=`, and `cmux_surface_id=`.
-For Pi on cmux, workspace creation alone is not success: spawn waits for Pi's lifecycle extension to report `agent-start` before publishing the worker record.
+Pi's launch confirmation and failure recovery are described under [Current operation and safety](#current-operation-and-safety).
 
 ## Runtime detection
 
@@ -82,18 +82,24 @@ cmux_surface_id=<surface-uuid>
 ```
 
 The UUID pair is the active endpoint authority within one app run.
-Workspace UUIDs are not stable across an app relaunch. A stale recorded UUID refuses target operations; scoped-title discovery can still identify an orphan workspace for inspection.
+Workspace UUIDs are not stable across an app relaunch.
+A stale recorded workspace or surface UUID refuses target operations; scoped-title discovery can still identify an orphan workspace for inspection but cannot redirect operations to it.
 
 ## Current operation and safety
 
 A genuinely fresh surface returns an internal error from `read-screen` until something has been written.
 Target readiness therefore uses the structural `list-panes` response instead of a content read.
-The exact create response is endpoint authority because a successful workspace can be absent from the immediate current-window title listing.
 Capture remains bounded and locally trimmed after `read-screen` becomes available.
 
-For Pi, structural readiness is necessary but not sufficient.
-The cmux spawn path waits a bounded interval for the task's generation-bound Pi extension to report `agent_start`, accepting either the resulting busy state or a later settled idle state from the same `pi-ext` source.
-If the staged command is not submitted, that event never arrives, metadata publication fails, or final backlog dispatch fails, spawn attempts exact endpoint cleanup and retains `state/<id>.cmux-launch-recovery` with the exact endpoint, project copy, Pi start confirmation, and unverified closure. It rolls back the task and busy records when possible, refuses a same-id retry until that recovery record is resolved, and does not switch to tmux.
+For Pi and pi-signed, structural readiness is necessary but not sufficient.
+Spawn seeds the task's busy state as unknown and waits a bounded interval for the generation-bound Pi extension's `agent-start` event, accepting either the resulting busy state or a later settled idle state from the same `pi-ext` source.
+A fresh worker record is published only after that confirmation.
+Recovery is armed as soon as the exact endpoint exists, covering every abort before commit, including worktree discovery, launch staging or submission, missing Pi confirmation, metadata publication, and final backlog dispatch failure.
+On failure, spawn attempts exact endpoint cleanup and preserves any isolated project copy, rolling back task and busy records when possible without switching to tmux.
+It writes `state/<id>.cmux-launch-recovery` with the endpoint, project, verified copy path when known, and Pi start confirmation; if worktree discovery failed, the copy path remains empty rather than claiming a verified location.
+Closure starts as `unverified` and is updated to `confirmed` only when cleanup proves the workspace is gone.
+Recovery write or publication failures are reported, including a retained staging path when available.
+A recovery record blocks a same-id retry even after confirmed closure, until the preserved project copy and endpoint have been reconciled and the record resolved.
 
 `current_directory` follows a top-level shell `cd` but not the foreground subshell opened by `treehouse get`.
 Spawn-time worktree discovery sends begin and end markers around `pwd`, captures the marked block, and joins wrapped path lines.
@@ -116,6 +122,9 @@ The sibling never carries an `fm-` title and is ignored by scoped-title discover
 The exact window membership is re-read before this operation.
 A selected workspace that is not last closes normally; selection itself is not the trigger.
 Firstmate does not attempt to close the macOS window because cmux's socket cannot close a window holding a live terminal.
+Cleanup succeeds only when an exact-workspace `list-panes` probe returns the typed workspace-not-found response, including when the workspace was already gone.
+A successful close acknowledgement, a missing title, or an inconclusive probe does not prove closure.
+Teardown prepares any backlog transition before closing the endpoint, then requires confirmed closure before returning the project copy or removing task records; `--force` does not override this refusal.
 
 Real tests share the captain's running app rather than creating an isolated cmux session.
 `tests/cmux-test-safety.sh` permits cleanup only for an exact currently listed `fm-test-` workspace and never enumerates and closes unrelated workspaces or relaunches the app.
