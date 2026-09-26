@@ -142,7 +142,6 @@ make_case() {  # <name> <id>
   fm_test_spawn_brief "$home" "$id" "Confirm a cmux Pi worker is processing this brief."
   fm_git_init_commit "$project"
   git clone -q "$project" "$copy" || fail "could not clone the isolated fixture copy"
-  git -C "$copy" remote remove origin
   fakebin=$(make_cmux_pi_fakebin "$dir/fake")
   printf '%s\n' "$dir|$home|$project|$copy|$fakebin"
 }
