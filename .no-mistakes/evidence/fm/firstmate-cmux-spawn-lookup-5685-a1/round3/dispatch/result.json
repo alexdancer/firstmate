@@ -1,0 +1,22 @@
+{
+  "mode": "dispatch",
+  "task": "test-cmux-dispatch-3636",
+  "checks": {
+    "exit_nonzero": true,
+    "no_meta": true,
+    "has_recovery": true,
+    "copy_preserved": true,
+    "pi_start_accurate": true,
+    "closure_confirmed": true,
+    "no_tmux": true
+  },
+  "recovery": {
+    "task_id": "test-cmux-dispatch-3636",
+    "endpoint": "1B39EAF6-AD7F-46D2-8EE9-082B6ADA435B:FC12AED8-BC74-424A-9449-D8F82CFAB23C",
+    "worktree": "/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-68f8d6/1/probe",
+    "project": "/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/dispatch/home/projects/probe",
+    "harness": "pi",
+    "pi_start_confirmed": "1",
+    "closure": "confirmed"
+  }
+}

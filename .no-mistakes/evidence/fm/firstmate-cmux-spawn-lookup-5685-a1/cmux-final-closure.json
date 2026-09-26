@@ -1,0 +1,42 @@
+[
+  {
+    "workspace": "2AE26E7F-364F-4C4C-9513-3EEFA5B44852",
+    "exit_code": 1,
+    "output": "Error: not_found: Workspace not found"
+  },
+  {
+    "workspace": "4B3E8DFC-2695-451F-9BA2-01B735C63FB5",
+    "exit_code": 1,
+    "output": "Error: not_found: Workspace not found"
+  },
+  {
+    "workspace": "57BB4808-B9CC-43D0-9AA8-19AF54480047",
+    "exit_code": 1,
+    "output": "Error: not_found: Workspace not found"
+  },
+  {
+    "workspace": "754A540A-4ED3-41B2-B8D5-FDA7589A9E12",
+    "exit_code": 1,
+    "output": "Error: not_found: Workspace not found"
+  },
+  {
+    "workspace": "932388B5-7E5A-46C1-9A5D-D48E0C7B25AB",
+    "exit_code": 1,
+    "output": "Error: not_found: Workspace not found"
+  },
+  {
+    "workspace": "B25BA6CC-3F90-4E03-9788-F5B9787A707D",
+    "exit_code": 1,
+    "output": "Error: not_found: Workspace not found"
+  },
+  {
+    "workspace": "DE0E8615-CF77-40AF-934B-67696F18C444",
+    "exit_code": 1,
+    "output": "Error: not_found: Workspace not found"
+  },
+  {
+    "workspace": "E5BB0B97-6952-4E9D-815E-AF1CE2903784",
+    "exit_code": 1,
+    "output": "Error: not_found: Workspace not found"
+  }
+]

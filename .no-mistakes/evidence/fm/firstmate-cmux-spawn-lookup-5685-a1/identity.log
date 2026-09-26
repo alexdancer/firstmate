@@ -1,0 +1,13 @@
+created 57BB4808-B9CC-43D0-9AA8-19AF54480047:5F3AF54E-32C7-44B9-A101-5D6DA5BBB2EF
+PASS: real workspace absent from current-window projection remains usable by exact identity
+{
+  "pane_id" : "38135DBF-801D-48B6-A121-5CCEB2E5E73A",
+  "surface_id" : "E2BDA416-B65C-466E-803D-0646B99AFA1B",
+  "type" : "terminal",
+  "window_id" : "471EE91D-7DB5-4988-A775-EF5C8F3EB785",
+  "workspace_id" : "57BB4808-B9CC-43D0-9AA8-19AF54480047"
+}
+OK surface:23 workspace:14
+PASS: stale surface refuses send, key, capture and cleanup while replacement remains live
+PASS: closed workspace never redirects to a live same-title replacement
+PASS: exact cleanup confirmed for both real test workspaces

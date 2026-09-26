@@ -1,0 +1,11 @@
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/teardown/home
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no live watcher process holds this home lock (last beat: 20s ago).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  repair missing watcher supervision with a foreground checkpoint: bin/fm-watch-checkpoint.sh --seconds 180.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+error: the cmux endpoint 3BCA1860-7AB2-412C-914B-119B97069E30:F9294E51-441F-4E05-BE32-8CBDA9E88238 for test-cmux-teardown-80784 could not be closed, so it may still be live.
+error: stopping this cleanup without removing the task's records, so the record naming 3BCA1860-7AB2-412C-914B-119B97069E30:F9294E51-441F-4E05-BE32-8CBDA9E88238 is still here to reconcile from.
+error: that retention is not durable across a session start: if this task carries a backlog transition, the next session replays its pending close and removes the retained record, so reconcile the surviving endpoint yourself rather than trusting the retention.

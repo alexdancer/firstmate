@@ -1,0 +1,7 @@
+task_id=test-cmux-send-failure-3636
+endpoint=4D0AD165-5EBC-46DB-A768-FA92B18741EF:66A4F240-8B82-4BDB-B0CF-623643AFD754
+worktree=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-9786c2/1/probe
+project=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/send-failure/home/projects/probe
+harness=pi
+pi_start_confirmed=0
+closure=confirmed

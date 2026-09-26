@@ -1,0 +1,12 @@
+#!/bin/bash
+for arg in "$@"; do target=$arg; done
+case "$target" in
+  *.meta)
+    if [ -n "${LIVE_CASE:-}" ]; then
+      task=${target##*/}; task=${task%.meta}
+      cat "${target%/*}/$task.busy-state" > "$LIVE_CASE/at-publication.busy" 2>/dev/null || true
+    fi
+    if [ "${LIVE_MODE:-}" = publication ]; then exit 1; fi ;;
+  */launch.*.sh) if [ "${LIVE_MODE:-}" = precommit ]; then exit 1; fi ;;
+esac
+exec /bin/mv "$@"

@@ -1,0 +1,16 @@
+window=FB4B92A5-D9C6-45FB-BA85-93E842AC6068:7F296477-90C8-4BC1-A2B3-5BE83B05F455
+endpoint_task_id=test-cmux-pi-launch-86284
+worktree=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-60ddbf/1/probe
+project=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/tmp/fm-cmux-pi-launch.wA6QuS/projects/probe
+harness=pi
+kind=scout
+tasktmp=/tmp/fm-test-cmux-pi-launch-86284
+model=default
+effort=default
+busy_gen=g1790386860.88057.11789
+spawn_gen=s1790386861.86394.18416
+backend=cmux
+cmux_workspace_id=FB4B92A5-D9C6-45FB-BA85-93E842AC6068
+cmux_surface_id=7F296477-90C8-4BC1-A2B3-5BE83B05F455
+decisions_reviewed=1
+decision_keys=

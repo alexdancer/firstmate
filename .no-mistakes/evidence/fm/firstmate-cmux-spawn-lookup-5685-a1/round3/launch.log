@@ -1,0 +1,5 @@
+scaffolded: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/tmp/fm-cmux-pi-launch.W3dz4U/data/test-cmux-pi-launch-62908/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})
+error: spawn aborted before its cmux Pi worker was committed; exact cmux endpoint E02B0726-F2FA-41C2-B50B-98F0638E2D21:42089FA9-A066-42C0-B09A-DABC7EAF2B59 closure is confirmed, and any isolated project copy remains in place but its path was not verified; recovery record: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/tmp/fm-cmux-pi-launch.W3dz4U/state/test-cmux-pi-launch-62908.cmux-launch-recovery
+Terminated: 15             FM_HOME="$LAB" "$ROOT/bin/fm-spawn.sh" "$TASK" "$LAB/projects/probe" --scout --harness pi --backend cmux
+not ok - the real Pi cmux spawn did not confirm that Pi began processing its launch brief
+cmux Pi lab preserved at /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/tmp/fm-cmux-pi-launch.W3dz4U

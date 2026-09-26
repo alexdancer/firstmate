@@ -1,0 +1,3 @@
+ok - fm_backend_cmux_kill: closes the task workspace directly when it is not the last in its window
+ok - fm_backend_cmux_kill: refuses a close that leaves the exact endpoint live
+ok - live cmux cleanup guard refuses an unconfirmed workspace close

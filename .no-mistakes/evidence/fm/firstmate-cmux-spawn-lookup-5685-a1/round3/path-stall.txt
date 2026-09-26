@@ -1,0 +1,80 @@
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜ printf '%s                                                                                         HEAD(311a9cb) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-afd4da/1/probe
+__FM_CMUX_CWD_END__%                                                                                                       probe ➜                                                                                                    HEAD(311a9cb) 

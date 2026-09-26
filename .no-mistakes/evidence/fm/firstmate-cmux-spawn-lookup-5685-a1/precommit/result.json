@@ -1,0 +1,22 @@
+{
+  "mode": "precommit",
+  "task": "test-cmux-precommit-26983",
+  "checks": {
+    "exit_nonzero": true,
+    "no_meta": true,
+    "has_recovery": true,
+    "copy_preserved": true,
+    "pi_start_accurate": true,
+    "closure_confirmed": true,
+    "no_tmux": true
+  },
+  "recovery": {
+    "task_id": "test-cmux-precommit-26983",
+    "endpoint": "E5BB0B97-6952-4E9D-815E-AF1CE2903784:2FFFF675-1623-498D-93F4-2FB7C4086364",
+    "worktree": "/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/pool/.treehouse/probe-dcffb9/1/probe",
+    "project": "/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/precommit/home/projects/probe",
+    "harness": "pi",
+    "pi_start_confirmed": "0",
+    "closure": "confirmed"
+  }
+}

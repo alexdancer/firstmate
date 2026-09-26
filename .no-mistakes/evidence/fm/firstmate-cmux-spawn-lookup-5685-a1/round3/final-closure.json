@@ -1,0 +1,50 @@
+[
+  {
+    "workspace": "1A8CF75C-FC77-4BB4-A258-A2DA3BA7C284",
+    "exit": 1,
+    "response": "Error: not_found: Workspace not found",
+    "confirmed_gone": true
+  },
+  {
+    "workspace": "1B39EAF6-AD7F-46D2-8EE9-082B6ADA435B",
+    "exit": 1,
+    "response": "Error: not_found: Workspace not found",
+    "confirmed_gone": true
+  },
+  {
+    "workspace": "3BCA1860-7AB2-412C-914B-119B97069E30",
+    "exit": 1,
+    "response": "Error: not_found: Workspace not found",
+    "confirmed_gone": true
+  },
+  {
+    "workspace": "456DB74B-70B8-4947-8C19-153A4B9CDDDA",
+    "exit": 1,
+    "response": "Error: not_found: Workspace not found",
+    "confirmed_gone": true
+  },
+  {
+    "workspace": "4D0AD165-5EBC-46DB-A768-FA92B18741EF",
+    "exit": 1,
+    "response": "Error: not_found: Workspace not found",
+    "confirmed_gone": true
+  },
+  {
+    "workspace": "C684BE11-41AE-42E1-84F9-1DC014965F26",
+    "exit": 1,
+    "response": "Error: not_found: Workspace not found",
+    "confirmed_gone": true
+  },
+  {
+    "workspace": "E02B0726-F2FA-41C2-B50B-98F0638E2D21",
+    "exit": 1,
+    "response": "Error: not_found: Workspace not found",
+    "confirmed_gone": true
+  },
+  {
+    "workspace": "FB4B92A5-D9C6-45FB-BA85-93E842AC6068",
+    "exit": 1,
+    "response": "Error: not_found: Workspace not found",
+    "confirmed_gone": true
+  }
+]

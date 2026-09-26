@@ -1,0 +1,8 @@
+Per-run PATH prefix: /Applications/cmux.app/Contents/Resources/bin
+Command: cmux ping
+Exit code: 1
+stdout:
+
+stderr:
+Error: ERROR: Access denied - only processes started inside cmux can connect
+

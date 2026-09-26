@@ -1,0 +1,9 @@
+#!/bin/bash
+if [ "${LIVE_MODE:-}" = send-failure ] && [ "$1" = send ] && [[ "$*" == *"/launch."* ]]; then
+  echo refused > "$LIVE_CASE/send-fault"
+  exit 1
+fi
+if [ "$1" = workspace ] && [ "${2:-}" = create ]; then
+  exec /Applications/cmux.app/Contents/Resources/bin/cmux "$@" --env TREEHOUSE_ROOT=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool --env TMPDIR=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/tmp --env SHELL=/bin/bash --command '/bin/bash --noprofile --norc'
+fi
+exec /Applications/cmux.app/Contents/Resources/bin/cmux "$@"

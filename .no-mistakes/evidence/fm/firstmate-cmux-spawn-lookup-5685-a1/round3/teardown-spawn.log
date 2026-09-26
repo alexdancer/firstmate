@@ -1,0 +1,2 @@
+spawned test-cmux-teardown-80784 harness=pi kind=scout window=3BCA1860-7AB2-412C-914B-119B97069E30:F9294E51-441F-4E05-BE32-8CBDA9E88238 worktree=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-81a071/1/probe
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/teardown/home

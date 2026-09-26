@@ -1,0 +1,8 @@
+A new version of treehouse is available: v2.3.0 → v3.0.0
+Run "treehouse update" to update
+
+🌳 Worktree returned to pool.
+teardown test-cmux-teardown-80784 complete (window 3BCA1860-7AB2-412C-914B-119B97069E30:F9294E51-441F-4E05-BE32-8CBDA9E88238, worktree /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-81a071/1/probe)
+Backlog: test-cmux-teardown-80784 just finished (config/backlog-backend selects manual editing). Update /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/teardown/home/data/backlog.md - move test-cmux-teardown-80784 to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/teardown/home
+WARNING: watcher still down (same stale episode; last beat: 22s ago, grace 300s) - full banner already printed this episode.

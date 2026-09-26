@@ -1,0 +1,22 @@
+{
+  "mode": "publication",
+  "task": "test-cmux-publication-3636",
+  "checks": {
+    "exit_nonzero": true,
+    "no_meta": true,
+    "has_recovery": true,
+    "copy_preserved": true,
+    "pi_start_accurate": true,
+    "closure_confirmed": true,
+    "no_tmux": true
+  },
+  "recovery": {
+    "task_id": "test-cmux-publication-3636",
+    "endpoint": "456DB74B-70B8-4947-8C19-153A4B9CDDDA:0085AF33-4B40-41D0-9FDE-EFE42EA64493",
+    "worktree": "/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/pool/.treehouse/probe-e2e3b8/1/probe",
+    "project": "/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-validation-r3/publication/home/projects/probe",
+    "harness": "pi",
+    "pi_start_confirmed": "1",
+    "closure": "confirmed"
+  }
+}

@@ -1,0 +1,3 @@
+Pi report: Live teardown probe ready
+Stale-surface teardown refused; task metadata and isolated copy remain
+After exact closure was confirmed, teardown succeeded and retired task metadata

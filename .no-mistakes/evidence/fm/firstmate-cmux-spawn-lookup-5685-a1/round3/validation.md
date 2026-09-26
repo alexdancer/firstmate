@@ -1,0 +1,16 @@
+# cmux live validation, retry 3
+
+All six scoped scenarios passed against the running cmux app. Pi and Treehouse were real installed executables, with subprocess-local PATH and temporary profile, session, pool, and home paths inside the gate worktree. Shared cmux settings were unchanged.
+
+- Real Pi scout: the existing live test returned 0, published its exact endpoint metadata after Pi reported agent-start, and verified the report `cmux Pi launch probe passed` and done status. See launch-clean-shell.log and success-state/.
+- Missing title projection: create routed to another existing window. The new workspace was absent from the current-window projection; exact identity still supported readiness, send and capture. This exercised real projection absence, not an artificially delayed response. See identity.log.
+- Failed submission: a fault wrapper rejected only the real staged-launch send. No worker record was published, the real Treehouse copy survived, exact recovery was recorded, and closure was confirmed. No tmux launch was attempted. See send-failure/.
+- Stale identities: closing the original surface, then closing and recreating the workspace with the same title, never redirected send/key/capture/cleanup onto a replacement. See identity.log.
+- Recovery: real staging, metadata publication and tasks-axi dispatch were selectively rejected by wrappers. All paths retained copies and accurate recovery, rolled back ordinary metadata, and confirmed endpoint closure. Publication and dispatch used genuine Pi agent-start events, not fabricated busy state. Both dispatch attempts were rejected. See precommit/, publication/, dispatch/, failures.log and recovery-state/.
+- Cleanup: the live test required confirmed closure. A separate real Pi scout reached a report, then its recorded surface was closed while a replacement kept its workspace live. fm-teardown refused and retained metadata/copy. After guarded exact closure, fm-teardown completed and removed metadata. See teardown*.log and final-closure.json.
+
+The first attempt inherited the host zsh environment inside Treehouse and stalled parsing its path output. It was interrupted before launch; the product recorded accurate pre-commit recovery and confirmed closure while retaining the copy. Setting SHELL=/bin/bash in the isolated workspace creation environment made the rerun pass. See launch.log and path-stall.txt. Pi discovery was disabled for unrelated ancestor extensions and context while its explicit Firstmate lifecycle extension remained enabled; credentials were copied only into the disposable local profile and never into evidence.
+
+Supplemental targeted regression commands passed: bash tests/fm-backend-cmux.test.sh and bash tests/fm-cmux-pi-launch.test.sh. No complete suite, lint, formatting, static analysis, push, PR, CI or pipeline-control command was run. The change concerns runtime launch and cleanup, not visual layout; evidence consists of CLI transcripts, real TUI text, persisted state and typed endpoint-absence responses.
+
+Every test endpoint was closed through the guarded backend path. Final exact probes returned typed Workspace not found. Temporary lab homes, isolated credential copy, sessions, pools and caches were removed from the worktree after those checks. No source changes were needed.

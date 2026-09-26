@@ -1,0 +1,4 @@
+scaffolded: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/tmp/fm-cmux-pi-launch.HuqsmN/data/test-cmux-pi-launch-1056/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})
+spawned test-cmux-pi-launch-1056 harness=pi kind=scout window=2AE26E7F-364F-4C4C-9513-3EEFA5B44852:B031D183-F313-46F4-87D2-DE2CA147E733 worktree=/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/pool/.treehouse/probe-562ab3/1/probe
+cmux Pi lab preserved at /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/tmp/fm-cmux-pi-launch.HuqsmN
+ok - a real cmux Pi scout reports processing the launch brief before fm-spawn returns success

@@ -1,0 +1,22 @@
+{
+  "mode": "send-failure",
+  "task": "test-cmux-send-failure-26983",
+  "checks": {
+    "exit_nonzero": true,
+    "no_meta": true,
+    "has_recovery": true,
+    "copy_preserved": true,
+    "pi_start_accurate": true,
+    "closure_confirmed": true,
+    "no_tmux": true
+  },
+  "recovery": {
+    "task_id": "test-cmux-send-failure-26983",
+    "endpoint": "754A540A-4ED3-41B2-B8D5-FDA7589A9E12:D4F7CF52-77C8-486A-B3D9-C58B039A09C9",
+    "worktree": "/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/pool/.treehouse/probe-20e41b/1/probe",
+    "project": "/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/send-failure/home/projects/probe",
+    "harness": "pi",
+    "pi_start_confirmed": "0",
+    "closure": "confirmed"
+  }
+}

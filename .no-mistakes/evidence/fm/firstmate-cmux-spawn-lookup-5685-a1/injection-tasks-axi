@@ -1,0 +1,6 @@
+#!/bin/bash
+if [ "${LIVE_MODE:-}" = dispatch ] && [ "$1" = start ]; then
+  echo start >> "$LIVE_CASE/dispatch-attempts"
+  exit 1
+fi
+exec /Users/alex/.local/bin/tasks-axi "$@"

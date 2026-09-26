@@ -1,0 +1,3 @@
+#!/bin/bash
+[ -z "${LIVE_CASE:-}" ] || touch "$LIVE_CASE/tmux-called"
+exit 99

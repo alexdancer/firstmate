@@ -1,0 +1,4 @@
+scaffolded: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/tmp/fm-cmux-pi-launch.KZtTnR/data/test-cmux-pi-launch-22785/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})
+error: /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/tmp/fm-cmux-pi-launch.KZtTnR/data/test-cmux-pi-launch-22785/brief.md still contains {TASK} or {FIRSTMATE_SPEC}; fill ## Captain's intent and ## Firstmate spec before spawn
+not ok - the real Pi cmux spawn did not confirm that Pi began processing its launch brief
+cmux Pi lab preserved at /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/tmp/fm-cmux-pi-launch.KZtTnR

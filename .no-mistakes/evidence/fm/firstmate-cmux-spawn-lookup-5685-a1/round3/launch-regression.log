@@ -1,0 +1,9 @@
+ok - fm-spawn accepts a masked cmux workspace only after Pi reports processing the brief
+ok - fm-spawn refuses an idle cmux shell, attempts exact cleanup, and preserves the unrecorded project copy
+ok - fm-spawn refuses a failed cmux Pi launch send without publishing metadata
+ok - fm-spawn refuses a failed cmux Pi Enter without publishing metadata
+ok - fm-spawn attempts exact Pi cleanup when post-processing metadata publication fails
+ok - fm-spawn preserves exact cmux recovery after failed backlog dispatch
+ok - fm-spawn retains exact cmux recovery when worktree discovery aborts
+ok - fm-spawn propagates a non-cmux launch send failure
+# all cmux Pi launch confirmation tests passed

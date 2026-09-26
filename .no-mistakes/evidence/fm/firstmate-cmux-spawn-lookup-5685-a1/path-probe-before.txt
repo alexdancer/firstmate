@@ -1,0 +1,30 @@
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/pool/.treehouse/probe-ec5abe/1/probe
+__FM_CMUX_CWD_END__
+probe ➜ printf '%s                                                                 HEAD(7f3ee50) 
+∙ ' '__FM_CMUX_CWD_BEGIN__'; pwd; printf '%s' '__FM_CMUX_CWD_END__'
+__FM_CMUX_CWD_BEGIN__
+/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/pool/.treehouse/probe-ec5abe/1/probe
+__FM_CMUX_CWD_END__%                                                                               probe ➜ export GOTMPDIR=/tmp/fm-test-cmux-pi-launch-25626/gotmp                    HEAD(7f3ee50) 
+probe ➜ export COMPACT_ADVISER_DISABLE=1                                           HEAD(7f3ee50) 
+probe ➜ export FM_TASK_ID=test-cmux-pi-launch-25626                                HEAD(7f3ee50) 
+probe ➜ . '/tmp/fm-test-cmux-pi-launch-25626+f5d2913203b4e15340f9031d23426a30f17a9f40e736920cee9e338e4f2d22b0/launch.s1790385551.25732.3983.sh'
+───────────────────────────────────────────────────────────────────────────────────────────────────
+
+ Trust project folder?                                                                             
+ /Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/pool/ 
+ .treehouse/probe-ec5abe/1/probe                                                                   
+                                                                                                   
+ This allows pi to load .pi settings and resources, install missing project packages, and execute  
+ project extensions.                                                                               
+
+ → Trust                                                                                           
+   Trust parent folder                                                                             
+ (/Users/alex/.no-mistakes/worktrees/577f711a0daa/01M3D2JD5ZBG8VV8D72A3EZKJQ/.cmux-live-phase/pool 
+ /.treehouse/probe-ec5abe/1)                                                                       
+   Trust (this session only)                                                                       
+   Do not trust                                                                                    
+   Do not trust (this session only)                                                                
+
+ ↑↓ navigate  enter select  escape/ctrl+c cancel                                                   
+
+───────────────────────────────────────────────────────────────────────────────────────────────────
