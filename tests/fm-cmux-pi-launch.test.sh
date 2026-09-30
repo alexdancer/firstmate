@@ -15,13 +15,15 @@ FAILURE_ID="cmux-pi-ready-fail-$$"
 SEND_FAILURE_ID="cmux-pi-send-fail-$$"
 ENTER_FAILURE_ID="cmux-pi-enter-fail-$$"
 PUBLISH_FAILURE_ID="cmux-pi-publish-fail-$$"
+STAGED_RECOVERY_ID="cmux-pi-staged-recovery-$$"
+CONFIRMED_STAGED_RECOVERY_ID="cmux-pi-confirmed-staged-recovery-$$"
 DISPATCH_FAILURE_ID="cmux-pi-dispatch-fail-$$"
 WORKTREE_FAILURE_ID="cmux-pi-worktree-fail-$$"
 TMUX_FAILURE_ID="tmux-pi-send-fail-$$"
 
 cleanup_launch_tmp() {
-  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID" "/tmp/fm-$SEND_FAILURE_ID" "/tmp/fm-$ENTER_FAILURE_ID" "/tmp/fm-$PUBLISH_FAILURE_ID" "/tmp/fm-$DISPATCH_FAILURE_ID" "/tmp/fm-$WORKTREE_FAILURE_ID" "/tmp/fm-$TMUX_FAILURE_ID"
-  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" -o -name "fm-$SEND_FAILURE_ID+*" -o -name "fm-$ENTER_FAILURE_ID+*" -o -name "fm-$PUBLISH_FAILURE_ID+*" -o -name "fm-$DISPATCH_FAILURE_ID+*" -o -name "fm-$WORKTREE_FAILURE_ID+*" -o -name "fm-$TMUX_FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
+  rm -rf -- "/tmp/fm-$SUCCESS_ID" "/tmp/fm-$FAILURE_ID" "/tmp/fm-$SEND_FAILURE_ID" "/tmp/fm-$ENTER_FAILURE_ID" "/tmp/fm-$PUBLISH_FAILURE_ID" "/tmp/fm-$STAGED_RECOVERY_ID" "/tmp/fm-$CONFIRMED_STAGED_RECOVERY_ID" "/tmp/fm-$DISPATCH_FAILURE_ID" "/tmp/fm-$WORKTREE_FAILURE_ID" "/tmp/fm-$TMUX_FAILURE_ID"
+  find /tmp -maxdepth 1 -type d \( -name "fm-$SUCCESS_ID+*" -o -name "fm-$FAILURE_ID+*" -o -name "fm-$SEND_FAILURE_ID+*" -o -name "fm-$ENTER_FAILURE_ID+*" -o -name "fm-$PUBLISH_FAILURE_ID+*" -o -name "fm-$STAGED_RECOVERY_ID+*" -o -name "fm-$CONFIRMED_STAGED_RECOVERY_ID+*" -o -name "fm-$DISPATCH_FAILURE_ID+*" -o -name "fm-$WORKTREE_FAILURE_ID+*" -o -name "fm-$TMUX_FAILURE_ID+*" \) -exec rm -rf -- {} + 2>/dev/null || true
   fm_test_cleanup
 }
 trap cleanup_launch_tmp EXIT INT TERM
@@ -170,6 +172,18 @@ run_case_spawn() {  # <id> <emit-pi-event> [fail-launch-send] [fail-launch-enter
       "$id" "$PROJECT_DIR" --scout --harness pi --backend cmux
 }
 
+install_meta_and_recovery_publish_failure() {  # <fakebin>
+  cat > "$1/mv" <<'SH'
+#!/usr/bin/env bash
+for arg in "$@"; do target=$arg; done
+case "$target" in
+  "${FM_STATE_OVERRIDE:?}/${FM_FAKE_CMUX_ID:?}.meta"|"${FM_STATE_OVERRIDE:?}/${FM_FAKE_CMUX_ID:?}.cmux-launch-recovery") exit 1 ;;
+esac
+exec /bin/mv "$@"
+SH
+  chmod +x "$1/mv"
+}
+
 assert_cmux_recovery_record() {
   local confirmed=$2 closure=${3:-unverified} record="$HOME_DIR/state/$1.cmux-launch-recovery" contents
   assert_present "$record" "failed cmux Pi launch left no exact endpoint recovery record"
@@ -309,6 +323,88 @@ SH
   pass "fm-spawn attempts exact Pi cleanup when post-processing metadata publication fails"
 }
 
+test_spawn_blocks_retry_when_only_staged_recovery_survives() {
+  local fixture out status staged_record='' contents creates_before creates_after candidate
+  fixture=$(make_case staged-recovery "$STAGED_RECOVERY_ID")
+  read_case "$fixture"
+  install_meta_and_recovery_publish_failure "$FAKEBIN_DIR"
+  out=$(run_case_spawn "$STAGED_RECOVERY_ID" 1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn accepted Pi after metadata and recovery publication failed"
+  assert_contains "$out" "staged recovery record:" \
+    "spawn did not report its retained staged recovery record"
+  for candidate in "$HOME_DIR/state/.$STAGED_RECOVERY_ID.cmux-launch-recovery."*; do
+    [ -f "$candidate" ] || continue
+    staged_record=$candidate
+    break
+  done
+  [ -n "$staged_record" ] || fail "failed recovery publication retained no staged recovery record"
+  contents=$(cat "$staged_record")
+  assert_contains "$contents" "endpoint=aaaaaaaa-0000-0000-0000-000000000000:bbbbbbbb-1111-1111-1111-111111111111" \
+    "staged recovery record lost the exact endpoint"
+  assert_contains "$contents" "worktree=$COPY_DIR" \
+    "staged recovery record lost the isolated project copy"
+  creates_before=$(grep -c 'workspace create' "$CASE_DIR/cmux.log")
+  out=$(run_case_spawn "$STAGED_RECOVERY_ID" 1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn retried while a staged cmux recovery remained"
+  assert_contains "$out" 'has an unresolved cmux launch' \
+    "spawn did not refuse a retry protected only by staged recovery"
+  creates_after=$(grep -c 'workspace create' "$CASE_DIR/cmux.log")
+  [ "$creates_after" -eq "$creates_before" ] \
+    || fail "staged recovery retry created another cmux workspace"
+  assert_present "$COPY_DIR/README.md" "staged recovery retry lost the isolated project copy"
+  pass "fm-spawn blocks same-id retry while only staged cmux recovery survives"
+}
+
+test_spawn_blocks_retry_when_confirmed_recovery_stays_staged() {
+  local fixture out status staged_record='' creates_before creates_after candidate remaining=0
+  fixture=$(make_case confirmed-staged-recovery "$CONFIRMED_STAGED_RECOVERY_ID")
+  read_case "$fixture"
+  install_meta_and_recovery_publish_failure "$FAKEBIN_DIR"
+  out=$(run_case_spawn "$CONFIRMED_STAGED_RECOVERY_ID" 1 0 0 "$COPY_DIR" 1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn accepted Pi after confirmed recovery publication failed"
+  assert_contains "$out" "staged confirmed recovery record:" \
+    "spawn did not report its retained confirmed recovery stage"
+  for candidate in "$HOME_DIR/state/.$CONFIRMED_STAGED_RECOVERY_ID.cmux-launch-recovery."*; do
+    [ -f "$candidate" ] || continue
+    grep -Fx 'closure=confirmed' "$candidate" >/dev/null || continue
+    staged_record=$candidate
+    break
+  done
+  [ -n "$staged_record" ] || fail "confirmed cleanup retained no confirmed staged recovery record"
+  assert_contains "$(cat "$staged_record")" "worktree=$COPY_DIR" \
+    "confirmed staged recovery record lost the isolated project copy"
+  for candidate in "$HOME_DIR/state/.$CONFIRMED_STAGED_RECOVERY_ID.cmux-launch-recovery."*; do
+    [ -f "$candidate" ] || continue
+    [ "$candidate" != "$staged_record" ] || continue
+    grep -Fx 'closure=unverified' "$candidate" >/dev/null \
+      || fail "confirmed recovery left an unexpected sibling stage"
+    rm -f -- "$candidate" || fail "could not remove the superseded unverified recovery stage"
+  done
+  for candidate in "$HOME_DIR/state/.$CONFIRMED_STAGED_RECOVERY_ID.cmux-launch-recovery."*; do
+    [ -e "$candidate" ] || [ -L "$candidate" ] || continue
+    remaining=$((remaining + 1))
+    [ "$candidate" = "$staged_record" ] \
+      || fail "confirmed recovery retained an unexpected staged sibling"
+  done
+  [ "$remaining" -eq 1 ] || fail "confirmed recovery did not retain exactly one staged record"
+  assert_absent "$HOME_DIR/state/$CONFIRMED_STAGED_RECOVERY_ID.cmux-launch-recovery" \
+    "confirmed recovery unexpectedly published its final record"
+  creates_before=$(grep -c 'workspace create' "$CASE_DIR/cmux.log")
+  out=$(run_case_spawn "$CONFIRMED_STAGED_RECOVERY_ID" 1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn retried while confirmed staged recovery remained"
+  assert_contains "$out" 'has an unresolved cmux launch' \
+    "spawn did not refuse a retry protected by confirmed staged recovery"
+  creates_after=$(grep -c 'workspace create' "$CASE_DIR/cmux.log")
+  [ "$creates_after" -eq "$creates_before" ] \
+    || fail "confirmed staged recovery retry created another cmux workspace"
+  assert_present "$COPY_DIR/README.md" "confirmed staged recovery retry lost the isolated project copy"
+  pass "fm-spawn blocks same-id retry while confirmed cmux recovery remains staged"
+}
+
 test_spawn_retains_exact_recovery_after_dispatch_rollback() {
   local fixture out status
   fixture=$(make_case dispatch-failure "$DISPATCH_FAILURE_ID")
@@ -409,6 +505,8 @@ test_spawn_refuses_idle_shell_without_worker_record
 test_spawn_refuses_cmux_launch_send_failure
 test_spawn_refuses_cmux_launch_enter_failure
 test_spawn_closes_started_pi_after_record_publication_failure
+test_spawn_blocks_retry_when_only_staged_recovery_survives
+test_spawn_blocks_retry_when_confirmed_recovery_stays_staged
 test_spawn_retains_exact_recovery_after_dispatch_rollback
 test_spawn_recovers_exact_endpoint_before_worktree_confirmation
 test_spawn_propagates_tmux_launch_send_failure

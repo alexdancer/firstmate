@@ -1725,10 +1725,13 @@ if ! fm_lock_try_acquire "$SPAWN_TASK_LOCK"; then
   exit 1
 fi
 SPAWN_TASK_LOCK_HELD=1
-if [ -e "$STATE/$ID.cmux-launch-recovery" ] || [ -L "$STATE/$ID.cmux-launch-recovery" ]; then
-  echo "error: task $ID has an unresolved cmux launch recovery at $STATE/$ID.cmux-launch-recovery; inspect its recorded closure and preserved project copy before retrying" >&2
+for CMUX_LAUNCH_RECOVERY in \
+  "$STATE/$ID.cmux-launch-recovery" \
+  "$STATE/.$ID.cmux-launch-recovery."*; do
+  [ -e "$CMUX_LAUNCH_RECOVERY" ] || [ -L "$CMUX_LAUNCH_RECOVERY" ] || continue
+  echo "error: task $ID has an unresolved cmux launch recovery at $CMUX_LAUNCH_RECOVERY; inspect its recorded closure and preserved project copy before retrying" >&2
   exit 1
-fi
+done
 PROJ=
 ARG3=
 FIRSTMATE_HOME=
